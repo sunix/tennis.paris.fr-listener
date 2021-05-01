@@ -1,0 +1,21 @@
+apiVersion: 1.0.0
+
+metadata:
+  generateName: tennis-paris-fr-listener-
+
+components:
+
+  - id: mads-hartmann/bash-ide-vscode/latest
+    type: chePlugin
+
+  - id: timonwong/shellcheck/latest
+    type: chePlugin
+
+  - mountSources: true
+    args:
+      - sleep
+      - infinity
+    memoryLimit: 64M
+    type: dockerimage
+    image: sunix/git-devtools
+    alias: dev
