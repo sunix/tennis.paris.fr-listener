@@ -15,6 +15,16 @@ whenMonth=${WHEN_MONTH:-05}
 whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
 
+# Check if the configured date is in the past
+target_date="${whenYear}-${whenMonth}-${whenDay}"
+current_date=$(date +%Y-%m-%d)
+
+if [[ "$target_date" < "$current_date" ]]; then
+  echo "[]"
+  echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
+  exit 0
+fi
+
 # Build jq filter for court names
 IFS=',' read -ra COURT_ARRAY <<< "$courts"
 jq_filter='[.features[] | select(.properties.available and ('
