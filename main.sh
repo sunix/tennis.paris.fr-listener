@@ -20,7 +20,11 @@ target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
 current_date=$(date +%Y-%m-%d)
 
 # Use timestamp comparison for reliable date comparison (comparing at midnight)
-target_timestamp=$(date -d "$target_date" +%s 2>/dev/null || echo 0)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null)
+if [ -z "$target_timestamp" ]; then
+  echo "Error: Invalid date configuration: ${whenDay}/${whenMonth}/${whenYear}" >&2
+  exit 1
+fi
 current_timestamp=$(date -d "$current_date" +%s)
 
 if [[ $target_timestamp -lt $current_timestamp ]]; then
