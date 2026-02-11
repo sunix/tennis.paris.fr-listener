@@ -70,15 +70,17 @@ jobs:
           WHEN_YEAR="${WHEN_YEAR:-2021}"
           
           # Build message with search details
-          MESSAGE="🎾 Tennis listener update (changed)
+          read -r -d '' MESSAGE << EOF || true
+          🎾 Tennis listener update (changed)
 
-📋 *Search Parameters:*
-• Courts: ${COURTS}
-• Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
-• Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
+          📋 Search Parameters:
+          • Courts: ${COURTS}
+          • Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
+          • Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
 
-🎾 *Available Courts:*
-${TEXT}"
+          🎾 Available Courts:
+          ${TEXT}
+          EOF
           
           # Build JSON payload properly using Python
           PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': text}))" <<< "$MESSAGE")
