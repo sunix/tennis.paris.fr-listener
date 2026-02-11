@@ -56,10 +56,10 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: |
           TEXT=$(cat output.txt)
-          # Escape special characters for JSON
-          TEXT=$(echo "$TEXT" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()[:3500]))")
+          # Build JSON payload properly using Python
+          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': '🎾 Tennis listener update (changed)\n\n' + text}))" <<< "$TEXT")
           curl -X POST -H "Content-Type: application/json" \
-            -d "{\"text\": \"🎾 Tennis listener update (changed)\\n\\n${TEXT}\"}" \
+            -d "$PAYLOAD" \
             "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
 
       - name: Save new state (cache)
