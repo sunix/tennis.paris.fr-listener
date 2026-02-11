@@ -33,10 +33,6 @@ Help me to get notified once a tennis court is available
    WHEN_DAY=23
    WHEN_MONTH=05
    WHEN_YEAR=2021
-
-   # Pushover notification credentials (optional)
-   PUSHOVER_APP_TOKEN=your_token_here
-   PUSHOVER_USER_KEY=your_key_here
    ```
 
 3. Run the listener:
@@ -54,8 +50,6 @@ Help me to get notified once a tennis court is available
 | `WHEN_DAY` | Day to check | `23` | `23` |
 | `WHEN_MONTH` | Month to check | `05` | `05` (May) |
 | `WHEN_YEAR` | Year to check | `2021` | `2021` |
-| `PUSHOVER_APP_TOKEN` | Pushover app token (optional, for local notifications) | - | `azGDORePK8gMaC0QOYAMyEEuzJnyUi` |
-| `PUSHOVER_USER_KEY` | Pushover user key (optional, for local notifications) | - | `uQiRzpo4DXghDmr9QzzfQu27cmVRsG` |
 | `GOOGLE_CHAT_WEBHOOK` | Google Chat webhook URL (for GitHub Actions) | - | `https://chat.googleapis.com/v1/spaces/...` |
 
 ## GitHub Actions Setup

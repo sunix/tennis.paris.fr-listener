@@ -39,16 +39,4 @@ then
   echo "####################################################" >&2
   echo "########### New value:" >&2
   echo "$json" >&2
-  if [ -z "$json" ] || [ "$json" = "[]" ]
-  then
-	  message="🏠👿 Pas de court dispo le "$(date --date=${whenYear}-${whenMonth}-${whenDay} +%A\ %d\ %B\ %Y)
-  else
-    message="🎾🎉 Voici la liste des courts de tennis dispo le "$(date --date=${whenYear}-${whenMonth}-${whenDay} +%A\ %d\ %B\ %Y)
-  fi
-  curl -s \
-  --form-string "token=$PUSHOVER_APP_TOKEN" \
-  --form-string "user=$PUSHOVER_USER_KEY" \
-  --form-string "message=${message} entre ${hourRangeStart}h et ${hourRangeEnd}h !
-$json" \
-  https://api.pushover.net/1/messages.json
 fi
