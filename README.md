@@ -103,7 +103,8 @@ You can manually trigger the workflow:
 The project includes unit tests to verify the court list functionality. To run the tests:
 
 ```bash
-./test_main.sh
+./test_main.sh      # Tests for main.sh
+./test_scripts.sh   # Tests for workflow scripts
 ```
 
 The test suite includes:
@@ -114,8 +115,70 @@ The test suite includes:
 - Empty/non-empty array detection
 - Special character handling (accents)
 - Environment variable loading
+- Webhook validation
+- Change detection logic
+- Google Chat notification generation
 
 All tests should pass before deploying changes.
+
+## Scripts
+
+The repository includes several utility scripts in the `scripts/` directory that are used by the GitHub Actions workflow and can also be used locally:
+
+### `scripts/validate-webhook.sh`
+
+Validates that a Google Chat webhook URL is configured.
+
+```bash
+# Usage with argument
+./scripts/validate-webhook.sh <webhook_url>
+
+# Or with environment variable
+export GOOGLE_CHAT_WEBHOOK="https://chat.googleapis.com/..."
+./scripts/validate-webhook.sh
+```
+
+### `scripts/detect-change.sh`
+
+Detects changes in tennis court availability by computing and comparing SHA256 hashes.
+
+```bash
+# Usage
+./scripts/detect-change.sh <output_file> <state_dir>
+
+# Example
+./scripts/detect-change.sh output.txt state
+# Outputs: changed=true or changed=false
+```
+
+This script:
+- Computes the hash of the output file
+- Compares it with the previous hash stored in `<state_dir>/last_hash.txt`
+- Saves the new hash for the next run
+- Outputs whether the content has changed
+
+### `scripts/notify-google-chat.sh`
+
+Sends notifications to Google Chat with tennis court availability information.
+
+```bash
+# Usage
+./scripts/notify-google-chat.sh <output_file> <webhook_url>
+
+# Example
+./scripts/notify-google-chat.sh output.txt "$GOOGLE_CHAT_WEBHOOK"
+```
+
+This script:
+- Reads the output file with court availability
+- Loads configuration from `.env` if available
+- Builds a formatted message with search parameters
+- Sends the notification to Google Chat via webhook
+
+These scripts are designed to be:
+- **Reusable**: Can be run locally or in CI/CD
+- **Testable**: Unit tests are provided in `test_scripts.sh`
+- **Modular**: Each script has a single responsibility
 
 ## License
 
