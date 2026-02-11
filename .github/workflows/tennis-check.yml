@@ -56,8 +56,14 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: |
           TEXT=$(cat output.txt)
+          echo "=== Output content to send ==="
+          cat output.txt
+          echo "=============================="
           # Build JSON payload properly using Python
           PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': '🎾 Tennis listener update (changed)\n\n' + text}))" <<< "$TEXT")
+          echo "=== JSON Payload to send ==="
+          echo "$PAYLOAD"
+          echo "============================"
           curl -X POST -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
             "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
