@@ -50,5 +50,5 @@ then
   --form-string "user=$PUSHOVER_USER_KEY" \
   --form-string "message=${message} entre ${hourRangeStart}h et ${hourRangeEnd}h !
 $json" \
-  https://api.pushover.net/1/messages.json
+  https://api.pushover.net/1/messages.json > /dev/null 2>&1
 fi

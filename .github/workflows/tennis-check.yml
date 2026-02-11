@@ -64,7 +64,7 @@ jobs:
           echo "=== JSON Payload to send ==="
           echo "$PAYLOAD"
           echo "============================"
-          curl -X POST -H "Content-Type: application/json" \
+          curl -s -X POST -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
             "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
 
