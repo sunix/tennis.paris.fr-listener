@@ -61,6 +61,13 @@ jobs:
           cat output.txt
           echo "=============================="
           
+          # Load .env file if it exists
+          if [ -f .env ]; then
+            set -a
+            . ./.env
+            set +a
+          fi
+          
           # Extract search parameters from environment or defaults
           COURTS="${COURTS:-Philippe Auguste,Candie,Thiéré,La Faluère}"
           HOUR_RANGE_START="${HOUR_RANGE_START:-9}"
