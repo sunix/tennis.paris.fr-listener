@@ -40,3 +40,6 @@ then
   echo "########### New value:" >&2
   echo "$json" >&2
 fi
+
+# Always output the json to stdout for the GitHub Action workflow
+echo "$json"
