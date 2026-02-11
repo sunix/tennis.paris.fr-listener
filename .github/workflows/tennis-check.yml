@@ -57,7 +57,7 @@ jobs:
         run: |
           TEXT=$(cat output.txt)
           # Build JSON payload properly using Python
-          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': f'🎾 Tennis listener update (changed)\n\n{text}'}))" <<< "$TEXT")
+          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': '🎾 Tennis listener update (changed)\n\n' + text}))" <<< "$TEXT")
           curl -X POST -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
             "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
