@@ -60,8 +60,28 @@ jobs:
           echo "=== Output content to send ==="
           cat output.txt
           echo "=============================="
+          
+          # Extract search parameters from environment or defaults
+          COURTS="${COURTS:-Philippe Auguste,Candie,Thiéré,La Faluère}"
+          HOUR_RANGE_START="${HOUR_RANGE_START:-9}"
+          HOUR_RANGE_END="${HOUR_RANGE_END:-22}"
+          WHEN_DAY="${WHEN_DAY:-23}"
+          WHEN_MONTH="${WHEN_MONTH:-05}"
+          WHEN_YEAR="${WHEN_YEAR:-2021}"
+          
+          # Build message with search details
+          MESSAGE="🎾 Tennis listener update (changed)
+
+📋 *Search Parameters:*
+• Courts: ${COURTS}
+• Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
+• Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
+
+🎾 *Available Courts:*
+${TEXT}"
+          
           # Build JSON payload properly using Python
-          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': '🎾 Tennis listener update (changed)\n\n' + text}))" <<< "$TEXT")
+          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': text}))" <<< "$MESSAGE")
           echo "=== JSON Payload to send ==="
           echo "$PAYLOAD"
           echo "============================"
