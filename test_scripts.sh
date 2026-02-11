@@ -77,6 +77,7 @@ test_validate_webhook_no_arg() {
     echo "Test 1: validate-webhook.sh without argument should fail"
     
     unset GOOGLE_CHAT_WEBHOOK
+    exit_code=0
     output=$(./scripts/validate-webhook.sh 2>&1) || exit_code=$?
     
     assert_exit_code "1" "$exit_code" "Should exit with code 1 when no webhook provided"
@@ -187,7 +188,7 @@ test_detect_change_saves_hash() {
     assert_equals "exists" "$result" "Should create hash file in state directory"
 }
 
-# Test 9: notify-google-chat.sh without webhook should fail
+# Test 8: notify-google-chat.sh without webhook should fail
 test_notify_no_webhook() {
     echo "Test 9: notify-google-chat.sh without webhook should fail"
     
@@ -195,6 +196,7 @@ test_notify_no_webhook() {
     echo '[]' > "$test_output"
     
     unset GOOGLE_CHAT_WEBHOOK
+    exit_code=0
     output=$(./scripts/notify-google-chat.sh "$test_output" 2>&1) || exit_code=$?
     
     assert_exit_code "1" "$exit_code" "Should exit with code 1 when no webhook provided"
@@ -205,6 +207,7 @@ test_notify_no_webhook() {
 test_notify_missing_file() {
     echo "Test 10: notify-google-chat.sh with missing output file should fail"
     
+    exit_code=0
     output=$(./scripts/notify-google-chat.sh "/nonexistent/file.txt" "https://test.webhook.url" 2>&1) || exit_code=$?
     
     assert_exit_code "1" "$exit_code" "Should exit with code 1 when output file missing"
