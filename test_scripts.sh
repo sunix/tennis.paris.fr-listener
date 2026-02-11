@@ -157,9 +157,19 @@ test_detect_change_with_change() {
     assert_contains "$output" "changed=true" "Should detect change when content changes"
 }
 
-# Test 7: detect-change.sh saves hash correctly
+# Test 7: detect-change.sh with missing file should fail
+test_detect_change_missing_file() {
+    echo "Test 7: detect-change.sh with missing file should fail"
+    
+    output=$(./scripts/detect-change.sh "/nonexistent/file.txt" "$TEST_DIR/state_fail" 2>&1) || exit_code=$?
+    
+    assert_exit_code "1" "$exit_code" "Should exit with code 1 when output file missing"
+    assert_contains "$output" "not found" "Should show error about missing file"
+}
+
+# Test 8: detect-change.sh saves hash correctly
 test_detect_change_saves_hash() {
-    echo "Test 7: detect-change.sh saves hash correctly"
+    echo "Test 8: detect-change.sh saves hash correctly"
     
     local test_output="$TEST_DIR/output4.txt"
     local test_state="$TEST_DIR/state4"
@@ -177,9 +187,9 @@ test_detect_change_saves_hash() {
     assert_equals "exists" "$result" "Should create hash file in state directory"
 }
 
-# Test 8: notify-google-chat.sh without webhook should fail
+# Test 9: notify-google-chat.sh without webhook should fail
 test_notify_no_webhook() {
-    echo "Test 8: notify-google-chat.sh without webhook should fail"
+    echo "Test 9: notify-google-chat.sh without webhook should fail"
     
     local test_output="$TEST_DIR/output5.txt"
     echo '[]' > "$test_output"
@@ -191,9 +201,9 @@ test_notify_no_webhook() {
     assert_contains "$output" "ERROR" "Should show error message"
 }
 
-# Test 9: notify-google-chat.sh with missing output file should fail
+# Test 10: notify-google-chat.sh with missing output file should fail
 test_notify_missing_file() {
-    echo "Test 9: notify-google-chat.sh with missing output file should fail"
+    echo "Test 10: notify-google-chat.sh with missing output file should fail"
     
     output=$(./scripts/notify-google-chat.sh "/nonexistent/file.txt" "https://test.webhook.url" 2>&1) || exit_code=$?
     
@@ -201,9 +211,9 @@ test_notify_missing_file() {
     assert_contains "$output" "not found" "Should show error about missing file"
 }
 
-# Test 10: notify-google-chat.sh generates valid JSON payload
+# Test 11: notify-google-chat.sh generates valid JSON payload
 test_notify_json_payload() {
-    echo "Test 10: notify-google-chat.sh generates valid JSON payload"
+    echo "Test 11: notify-google-chat.sh generates valid JSON payload"
     
     local test_output="$TEST_DIR/output6.txt"
     echo '[{"nom":"Test Court","id":"123"}]' > "$test_output"
@@ -232,6 +242,8 @@ echo
 test_detect_change_no_change
 echo
 test_detect_change_with_change
+echo
+test_detect_change_missing_file
 echo
 test_detect_change_saves_hash
 echo

@@ -18,6 +18,12 @@ set -e
 OUTPUT_FILE="${1:-output.txt}"
 STATE_DIR="${2:-state}"
 
+# Check if output file exists
+if [ ! -f "$OUTPUT_FILE" ]; then
+  echo "ERROR: Output file '$OUTPUT_FILE' not found." >&2
+  exit 1
+fi
+
 # Ensure state directory exists
 mkdir -p "$STATE_DIR"
 
