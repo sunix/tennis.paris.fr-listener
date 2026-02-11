@@ -284,10 +284,14 @@ whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
 
 # Check if the configured date is in the past
-target_date="${whenYear}-${whenMonth}-${whenDay}"
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
 current_date=$(date +%Y-%m-%d)
 
-if [[ "$target_date" < "$current_date" ]]; then
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null || echo 0)
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
   echo "[]"
   echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
   exit 0
@@ -324,10 +328,14 @@ whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
 
 # Check if the configured date is in the past
-target_date="${whenYear}-${whenMonth}-${whenDay}"
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
 current_date=$(date +%Y-%m-%d)
 
-if [[ "$target_date" < "$current_date" ]]; then
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null || echo 0)
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
   echo "[]"
   echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
   exit 0
@@ -368,10 +376,14 @@ whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
 
 # Check if the configured date is in the past
-target_date="${whenYear}-${whenMonth}-${whenDay}"
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
 current_date=$(date +%Y-%m-%d)
 
-if [[ "$target_date" < "$current_date" ]]; then
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null || echo 0)
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
   echo "[]"
   echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
   exit 0
