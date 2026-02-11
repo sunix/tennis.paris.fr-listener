@@ -13,16 +13,31 @@ hourRangeEnd=${HOUR_RANGE_END:-22}
 whenDay=${WHEN_DAY:-23}
 whenMonth=${WHEN_MONTH:-05}
 whenYear=${WHEN_YEAR:-2021}
+courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
+
+# Build jq filter for court names
+IFS=',' read -ra COURT_ARRAY <<< "$courts"
+jq_filter='[.features[] | select(.properties.available and ('
+first=true
+for court in "${COURT_ARRAY[@]}"; do
+  if [ "$first" = true ]; then
+    jq_filter="${jq_filter}.properties.general._nomSrtm==\"${court}\""
+    first=false
+  else
+    jq_filter="${jq_filter} or .properties.general._nomSrtm==\"${court}\""
+  fi
+done
+jq_filter="${jq_filter})) | .properties.general | {nom: ._nomSrtm, id: ._id}]"
 
 json=$(curl 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map' \
   --data-raw "hourRange=${hourRangeStart}-${hourRangeEnd}&when=${whenDay}%2F${whenMonth}%2F${whenYear}"'&selCoating%5B%5D=96&selCoating%5B%5D=2095&selCoating%5B%5D=94&selCoating%5B%5D=1324&selCoating%5B%5D=2016&selCoating%5B%5D=92&selInOut%5B%5D=V&selInOut%5B%5D=F' \
-| jq '.features[] | select(.properties.available and (.properties.general._nomSrtm=="Philippe Auguste" or .properties.general._nomSrtm=="Candie" or .properties.general._nomSrtm=="Thiéré")) | .properties.general | {nom: ."_nomSrtm", id: ."_id"}')
+| jq "$jq_filter")
 
-if [[ "$json" != "$(cat /tmp/tennis.json)" ]]
+if [[ "$json" != "$(cat /tmp/tennis.json 2>/dev/null)" ]]
 then
   echo "$json" > /tmp/tennis.json
   echo "####################################################\n########### New value: \n$json"
-  if [ -z "$json" ]
+  if [ -z "$json" ] || [ "$json" = "[]" ]
   then
 	  message="🏠👿 Pas de court dispo le "$(date --date=${whenYear}-${whenMonth}-${whenDay} +%A\ %d\ %B\ %Y)
   else

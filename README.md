@@ -22,6 +22,9 @@ Help me to get notified once a tennis court is available
 2. Edit `.env` to customize your settings:
 
    ```bash
+   # List of courts to monitor (comma-separated)
+   COURTS="Philippe Auguste,Candie,Thiéré,La Faluère"
+
    # Time range for checking availability (hours)
    HOUR_RANGE_START=9
    HOUR_RANGE_END=22
@@ -45,6 +48,7 @@ Help me to get notified once a tennis court is available
 
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
+| `COURTS` | Comma-separated list of court names to monitor | `Philippe Auguste,Candie,Thiéré,La Faluère` | `Philippe Auguste,Candie` |
 | `HOUR_RANGE_START` | Start hour for availability check (24-hour format) | `9` | `9` (9 AM) |
 | `HOUR_RANGE_END` | End hour for availability check (24-hour format) | `22` | `22` (10 PM) |
 | `WHEN_DAY` | Day to check | `23` | `23` |
@@ -99,6 +103,25 @@ You can manually trigger the workflow:
 - `curl`
 - `jq` (JSON processor)
 - `python3` (for GitHub Actions notifications)
+
+## Testing
+
+The project includes unit tests to verify the court list functionality. To run the tests:
+
+```bash
+./test_main.sh
+```
+
+The test suite includes:
+- Default and custom court configuration
+- JQ filter generation for single and multiple courts
+- JQ filter syntax validation
+- Court filtering logic
+- Empty/non-empty array detection
+- Special character handling (accents)
+- Environment variable loading
+
+All tests should pass before deploying changes.
 
 ## License
 
