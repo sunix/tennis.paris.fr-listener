@@ -264,6 +264,159 @@ EOF
     rm -f "$temp_env"
 }
 
+# Test 11: Date validation - past date should be skipped
+test_past_date_validation() {
+    echo "Test 11: Date validation - past date should be skipped"
+    
+    # Test with a date in the past (2020-01-01)
+    # Create a temporary script without .env file loading to avoid conflicts
+    temp_dir=$(mktemp -d)
+    temp_script="$temp_dir/test_script.sh"
+    
+    # Copy main.sh without the .env loading section, and set variables directly
+    cat > "$temp_script" << 'EOFSCRIPT'
+#!/bin/bash
+hourRangeStart=9
+hourRangeEnd=22
+whenDay=${WHEN_DAY:-23}
+whenMonth=${WHEN_MONTH:-05}
+whenYear=${WHEN_YEAR:-2021}
+courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
+
+# Check if the configured date is in the past
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
+current_date=$(date +%Y-%m-%d)
+
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null)
+if [ -z "$target_timestamp" ]; then
+  echo "Error: Invalid date configuration: ${whenDay}/${whenMonth}/${whenYear}" >&2
+  exit 1
+fi
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
+  echo "[]"
+  echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
+  exit 0
+fi
+
+echo "would make API call here"
+EOFSCRIPT
+    
+    chmod +x "$temp_script"
+    output=$(WHEN_DAY=01 WHEN_MONTH=01 WHEN_YEAR=2020 "$temp_script" 2>&1)
+    
+    assert_contains "$output" "Date 01/01/2020 is in the past" "Should show message about date being in the past"
+    assert_contains "$output" "[]" "Should output empty array for past date"
+    
+    rm -rf "$temp_dir"
+}
+
+# Test 12: Date validation - future date should proceed
+test_future_date_validation() {
+    echo "Test 12: Date validation - future date should proceed"
+    
+    # Test with a date in the future (2030-01-01)
+    temp_dir=$(mktemp -d)
+    temp_script="$temp_dir/test_script.sh"
+    
+    # Copy main.sh without the .env loading section, and set variables directly
+    cat > "$temp_script" << 'EOFSCRIPT'
+#!/bin/bash
+hourRangeStart=9
+hourRangeEnd=22
+whenDay=${WHEN_DAY:-23}
+whenMonth=${WHEN_MONTH:-05}
+whenYear=${WHEN_YEAR:-2021}
+courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
+
+# Check if the configured date is in the past
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
+current_date=$(date +%Y-%m-%d)
+
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null)
+if [ -z "$target_timestamp" ]; then
+  echo "Error: Invalid date configuration: ${whenDay}/${whenMonth}/${whenYear}" >&2
+  exit 1
+fi
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
+  echo "[]"
+  echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
+  exit 0
+fi
+
+echo "would make API call here"
+EOFSCRIPT
+    
+    chmod +x "$temp_script"
+    
+    # Check that the script doesn't skip for future dates
+    stderr=$(WHEN_DAY=01 WHEN_MONTH=01 WHEN_YEAR=2030 "$temp_script" 2>&1 >/dev/null)
+    
+    assert_not_contains "$stderr" "is in the past" "Should not show skip message for future date"
+    
+    rm -rf "$temp_dir"
+}
+
+# Test 13: Date validation - today's date should proceed
+test_today_date_validation() {
+    echo "Test 13: Date validation - today's date should proceed"
+    
+    # Test with today's date
+    today=$(date +%Y-%m-%d)
+    IFS='-' read -r year month day <<< "$today"
+    # Ensure zero-padding
+    day=$(printf '%02d' $((10#$day)))
+    month=$(printf '%02d' $((10#$month)))
+    
+    temp_dir=$(mktemp -d)
+    temp_script="$temp_dir/test_script.sh"
+    
+    # Copy main.sh without the .env loading section, and set variables directly
+    cat > "$temp_script" << 'EOFSCRIPT'
+#!/bin/bash
+hourRangeStart=9
+hourRangeEnd=22
+whenDay=${WHEN_DAY:-23}
+whenMonth=${WHEN_MONTH:-05}
+whenYear=${WHEN_YEAR:-2021}
+courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
+
+# Check if the configured date is in the past
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
+current_date=$(date +%Y-%m-%d)
+
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null)
+if [ -z "$target_timestamp" ]; then
+  echo "Error: Invalid date configuration: ${whenDay}/${whenMonth}/${whenYear}" >&2
+  exit 1
+fi
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
+  echo "[]"
+  echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
+  exit 0
+fi
+
+echo "would make API call here"
+EOFSCRIPT
+    
+    chmod +x "$temp_script"
+    
+    # Check that the script doesn't skip for today's date
+    stderr=$(WHEN_DAY=$day WHEN_MONTH=$month WHEN_YEAR=$year "$temp_script" 2>&1 >/dev/null)
+    
+    assert_not_contains "$stderr" "is in the past" "Should not show skip message for today's date"
+    
+    rm -rf "$temp_dir"
+}
+
 # Run all tests
 echo "========================================="
 echo "Running unit tests for main.sh"
@@ -289,6 +442,12 @@ echo
 test_court_names_with_special_characters
 echo
 test_env_variable_loading
+echo
+test_past_date_validation
+echo
+test_future_date_validation
+echo
+test_today_date_validation
 echo
 
 # Print summary

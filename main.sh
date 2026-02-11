@@ -15,6 +15,24 @@ whenMonth=${WHEN_MONTH:-05}
 whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
 
+# Check if the configured date is in the past
+target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
+current_date=$(date +%Y-%m-%d)
+
+# Use timestamp comparison for reliable date comparison (comparing at midnight)
+target_timestamp=$(date -d "$target_date" +%s 2>/dev/null)
+if [ -z "$target_timestamp" ]; then
+  echo "Error: Invalid date configuration: ${whenDay}/${whenMonth}/${whenYear}" >&2
+  exit 1
+fi
+current_timestamp=$(date -d "$current_date" +%s)
+
+if [[ $target_timestamp -lt $current_timestamp ]]; then
+  echo "[]"
+  echo "Date ${whenDay}/${whenMonth}/${whenYear} is in the past. Skipping availability check." >&2
+  exit 0
+fi
+
 # Build jq filter for court names
 IFS=',' read -ra COURT_ARRAY <<< "$courts"
 jq_filter='[.features[] | select(.properties.available and ('
