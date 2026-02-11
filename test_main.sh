@@ -49,6 +49,24 @@ assert_contains() {
     fi
 }
 
+assert_not_contains() {
+    local haystack="$1"
+    local needle="$2"
+    local test_name="$3"
+    
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [[ "$haystack" != *"$needle"* ]]; then
+        echo -e "${GREEN}✓${NC} PASS: $test_name"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        return 0
+    else
+        echo -e "${RED}✗${NC} FAIL: $test_name"
+        echo "  Expected '$haystack' to NOT contain '$needle'"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    fi
+}
+
 # Test 1: Default courts configuration
 test_default_courts() {
     echo "Test 1: Default courts configuration"
@@ -172,17 +190,7 @@ test_jq_filter_filtering() {
     
     assert_contains "$result" '"nom":"Philippe Auguste"' "Result should contain Philippe Auguste"
     assert_contains "$result" '"nom":"Candie"' "Result should contain Candie"
-    
-    # Verify "Other Court" is NOT in the result
-    if [[ "$result" != *'"nom":"Other Court"'* ]]; then
-        echo -e "${GREEN}✓${NC} PASS: Result should not contain 'Other Court'"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        TESTS_RUN=$((TESTS_RUN + 1))
-    else
-        echo -e "${RED}✗${NC} FAIL: Result should not contain 'Other Court'"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-        TESTS_RUN=$((TESTS_RUN + 1))
-    fi
+    assert_not_contains "$result" '"nom":"Other Court"' "Result should not contain 'Other Court'"
 }
 
 # Test 7: Empty array detection
