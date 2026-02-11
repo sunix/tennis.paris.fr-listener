@@ -33,6 +33,7 @@ jobs:
         run: |
           chmod +x ./main.sh
           mkdir -p state
+          rm -f output.txt
           ./main.sh > output.txt
 
       - name: Compute hash and detect change
