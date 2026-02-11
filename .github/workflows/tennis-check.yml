@@ -15,11 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate Google Chat webhook secret
-        run: |
-          if [ -z "${{ secrets.GOOGLE_CHAT_WEBHOOK }}" ]; then
-            echo "ERROR: GOOGLE_CHAT_WEBHOOK secret is not set. Add it in GitHub repo Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
+        run: ./scripts/validate-webhook.sh "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
 
       - name: Restore previous state (cache)
         uses: actions/cache/restore@v4
@@ -39,64 +35,11 @@ jobs:
       - name: Compute hash and detect change
         id: diff
         run: |
-          NEW_HASH=$(sha256sum output.txt | awk '{print $1}')
-          OLD_HASH=""
-          if [ -f state/last_hash.txt ]; then
-            OLD_HASH=$(cat state/last_hash.txt)
-          fi
-
-          echo "$NEW_HASH" > state/last_hash.txt
-
-          if [ "$NEW_HASH" = "$OLD_HASH" ] && [ -n "$OLD_HASH" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+          ./scripts/detect-change.sh output.txt state >> $GITHUB_OUTPUT
 
       - name: Notify Google Chat (only on change)
         if: steps.diff.outputs.changed == 'true'
-        run: |
-          TEXT=$(cat output.txt)
-          echo "=== Output content to send ==="
-          cat output.txt
-          echo "=============================="
-          
-          # Load .env file if it exists
-          if [ -f .env ]; then
-            set -a
-            . ./.env
-            set +a
-          fi
-          
-          # Extract search parameters from environment or defaults
-          COURTS="${COURTS:-Philippe Auguste,Candie,Thiéré,La Faluère}"
-          HOUR_RANGE_START="${HOUR_RANGE_START:-9}"
-          HOUR_RANGE_END="${HOUR_RANGE_END:-22}"
-          WHEN_DAY="${WHEN_DAY:-23}"
-          WHEN_MONTH="${WHEN_MONTH:-05}"
-          WHEN_YEAR="${WHEN_YEAR:-2021}"
-          
-          # Build message with search details
-          read -r -d '' MESSAGE << EOF || true
-          🎾 Tennis listener update (changed)
-
-          📋 Search Parameters:
-          • Courts: ${COURTS}
-          • Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
-          • Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
-
-          🎾 Available Courts:
-          ${TEXT}
-          EOF
-          
-          # Build JSON payload properly using Python
-          PAYLOAD=$(python3 -c "import sys, json; text = sys.stdin.read()[:3500]; print(json.dumps({'text': text}))" <<< "$MESSAGE")
-          echo "=== JSON Payload to send ==="
-          echo "$PAYLOAD"
-          echo "============================"
-          curl -s -X POST -H "Content-Type: application/json" \
-            -d "$PAYLOAD" \
-            "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
+        run: ./scripts/notify-google-chat.sh output.txt "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
 
       - name: Save new state (cache)
         uses: actions/cache/save@v4
