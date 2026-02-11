@@ -1,10 +1,18 @@
 #!/bin/bash
 
-hourRangeStart=9
-hourRangeEnd=22
-whenDay=23
-whenMonth=05
-whenYear=2021
+# Load .env file if it exists
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
+# Configuration variables with defaults
+hourRangeStart=${HOUR_RANGE_START:-9}
+hourRangeEnd=${HOUR_RANGE_END:-22}
+whenDay=${WHEN_DAY:-23}
+whenMonth=${WHEN_MONTH:-05}
+whenYear=${WHEN_YEAR:-2021}
 
 json=$(curl 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map' \
   --data-raw "hourRange=${hourRangeStart}-${hourRangeEnd}&when=${whenDay}%2F${whenMonth}%2F${whenYear}"'&selCoating%5B%5D=96&selCoating%5B%5D=2095&selCoating%5B%5D=94&selCoating%5B%5D=1324&selCoating%5B%5D=2016&selCoating%5B%5D=92&selInOut%5B%5D=V&selInOut%5B%5D=F' \

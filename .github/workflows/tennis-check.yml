@@ -1,0 +1,69 @@
+name: Tennis availability check
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Google Chat webhook secret
+        run: |
+          if [ -z "${{ secrets.GOOGLE_CHAT_WEBHOOK }}" ]; then
+            echo "ERROR: GOOGLE_CHAT_WEBHOOK secret is not set. Add it in GitHub repo Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Restore previous state (cache)
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: tennis-state-${{ github.run_id }}
+          restore-keys: |
+            tennis-state-
+
+      - name: Run listener
+        run: |
+          chmod +x ./main.sh
+          mkdir -p state
+          ./main.sh > output.txt
+
+      - name: Compute hash and detect change
+        id: diff
+        run: |
+          NEW_HASH=$(sha256sum output.txt | awk '{print $1}')
+          OLD_HASH=""
+          if [ -f state/last_hash.txt ]; then
+            OLD_HASH=$(cat state/last_hash.txt)
+          fi
+
+          echo "$NEW_HASH" > state/last_hash.txt
+
+          if [ "$NEW_HASH" = "$OLD_HASH" ] && [ -n "$OLD_HASH" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Google Chat (only on change)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          TEXT=$(cat output.txt)
+          # Escape special characters for JSON
+          TEXT=$(echo "$TEXT" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()[:3500]))")
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🎾 Tennis listener update (changed)\\n\\n${TEXT}\"}" \
+            "${{ secrets.GOOGLE_CHAT_WEBHOOK }}"
+
+      - name: Save new state (cache)
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: tennis-state-${{ github.run_id }}

@@ -1,0 +1,10 @@
+# Local environment configuration
+.env
+
+# State directory (used by GitHub Actions)
+state/
+
+# Temporary files
+/tmp/
+*.tmp
+output.txt
