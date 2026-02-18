@@ -8,3 +8,6 @@ state/
 /tmp/
 *.tmp
 output.txt
+
+# Downloaded binaries
+actionlint
