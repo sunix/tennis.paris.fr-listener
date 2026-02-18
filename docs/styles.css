@@ -194,10 +194,74 @@ header h1 {
 }
 
 .court-numbers input {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.court-numbers-container {
+    margin-top: 10px;
+}
+
+.court-numbers-hint {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    font-style: italic;
+    margin: 0;
+}
+
+.court-checkboxes {
+    margin-top: 10px;
+}
+
+.select-all-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.court-checkboxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.court-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.court-checkbox-label:hover {
+    background-color: #f0f0f0;
+}
+
+.court-checkbox-label.covered {
+    background-color: #e8f4f8;
+}
+
+.court-checkbox-label.covered:hover {
+    background-color: #d0e9f2;
+}
+
+.court-checkbox-label input[type="checkbox"] {
+    margin-right: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.court-name {
     width: 100%;
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    font-size: 1em;
 }
 
 .saved-search {
