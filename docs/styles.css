@@ -193,7 +193,6 @@ header h1 {
 }
 
 .court-numbers input {
-    width: 100%;
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;

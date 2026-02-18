@@ -300,15 +300,14 @@ const FALLBACK_FACILITIES = {
 // State
 let searches = [];
 let courtIdCounter = 0;
-let facilitiesData = {}; // Store facility names and their available courts
+let facilitiesData = FALLBACK_FACILITIES; // Use fallback data directly
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     loadSearches();
     renderSavedSearches();
     updateExportSelect();
     setupEventListeners();
-    await fetchFacilitiesData(); // Wait for facilities data to load
     addCourtField(); // Add one court field by default
     setDefaultDate();
 });
@@ -321,104 +320,6 @@ function setDefaultDate() {
     document.getElementById('whenDay').value = tomorrow.getDate();
     document.getElementById('whenMonth').value = tomorrow.getMonth() + 1;
     document.getElementById('whenYear').value = tomorrow.getFullYear();
-}
-
-// Fetch facilities data from API
-async function fetchFacilitiesData() {
-    try {
-        const apiUrl = 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map';
-        
-        // Use a future date to get all facilities
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + 30);
-        
-        const formData = new URLSearchParams();
-        formData.append('hourRange', '9-22');
-        formData.append('when', `${futureDate.getDate()}/${futureDate.getMonth() + 1}/${futureDate.getFullYear()}`);
-        
-        // Add coating and in/out types
-        API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
-        API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
-        
-        // Try with CORS proxy first, fallback to direct
-        let response;
-        let rawJson;
-        
-        if (CORS_PROXY) {
-            try {
-                const fullUrl = `${apiUrl}?${formData.toString()}`;
-                const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(fullUrl)}`;
-                response = await fetch(proxiedUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    }
-                });
-                
-                if (response.ok) {
-                    rawJson = await response.json();
-                }
-            } catch (proxyError) {
-                console.warn('CORS proxy failed for facilities fetch, trying direct request:', proxyError);
-            }
-        }
-        
-        if (!rawJson) {
-            response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: formData.toString()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            rawJson = await response.json();
-        }
-        
-        // Process facilities data
-        const facilities = {};
-        rawJson.features.forEach(feature => {
-            const facilityName = getFacilityName(feature);
-            if (!facilities[facilityName]) {
-                facilities[facilityName] = [];
-            }
-            
-            // Collect all courts with their covered status
-            if (feature.properties.courts) {
-                feature.properties.courts.forEach(court => {
-                    const courtNum = court._formattedAirNum;
-                    const covered = court._airCvt === 'V'; // V = covered (Voûté/Vaulted)
-                    
-                    // Check if court already exists
-                    const exists = facilities[facilityName].find(c => c.number === courtNum);
-                    if (!exists) {
-                        facilities[facilityName].push({
-                            number: courtNum,
-                            covered: covered
-                        });
-                    }
-                });
-            }
-        });
-        
-        // Sort courts by number
-        Object.keys(facilities).forEach(name => {
-            facilities[name].sort((a, b) => a.number - b.number);
-        });
-        
-        facilitiesData = facilities;
-        console.log('Facilities data loaded from API:', Object.keys(facilities).length, 'facilities');
-        
-    } catch (error) {
-        console.warn('Failed to fetch facilities data from API, using fallback list:', error);
-        // Use fallback data
-        facilitiesData = FALLBACK_FACILITIES;
-        console.log('Using fallback facilities data:', Object.keys(facilitiesData).length, 'facilities');
-    }
 }
 
 // Setup event listeners
