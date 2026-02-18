@@ -15,6 +15,7 @@ const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 // State
 let searches = [];
 let courtIdCounter = 0;
+let facilitiesData = {}; // Store facility names and their available courts
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSavedSearches();
     updateExportSelect();
     setupEventListeners();
+    fetchFacilitiesData(); // Fetch facilities on page load
     addCourtField(); // Add one court field by default
     setDefaultDate();
 });
@@ -34,6 +36,93 @@ function setDefaultDate() {
     document.getElementById('whenDay').value = tomorrow.getDate();
     document.getElementById('whenMonth').value = tomorrow.getMonth() + 1;
     document.getElementById('whenYear').value = tomorrow.getFullYear();
+}
+
+// Fetch facilities data from API
+async function fetchFacilitiesData() {
+    try {
+        const apiUrl = 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map';
+        
+        // Use a future date to get all facilities
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + 30);
+        
+        const formData = new URLSearchParams();
+        formData.append('hourRange', '9-22');
+        formData.append('when', `${futureDate.getDate()}/${futureDate.getMonth() + 1}/${futureDate.getFullYear()}`);
+        
+        // Add coating and in/out types
+        API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
+        API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
+        
+        // Try with CORS proxy first, fallback to direct
+        let response;
+        let rawJson;
+        
+        if (CORS_PROXY) {
+            try {
+                const fullUrl = `${apiUrl}?${formData.toString()}`;
+                const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(fullUrl)}`;
+                response = await fetch(proxiedUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    rawJson = await response.json();
+                }
+            } catch (proxyError) {
+                console.warn('CORS proxy failed for facilities fetch, trying direct request:', proxyError);
+            }
+        }
+        
+        if (!rawJson) {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            rawJson = await response.json();
+        }
+        
+        // Process facilities data
+        const facilities = {};
+        rawJson.features.forEach(feature => {
+            const facilityName = getFacilityName(feature);
+            if (!facilities[facilityName]) {
+                facilities[facilityName] = new Set();
+            }
+            
+            // Collect all court numbers for this facility
+            if (feature.properties.courts) {
+                feature.properties.courts.forEach(court => {
+                    facilities[facilityName].add(court._formattedAirNum);
+                });
+            }
+        });
+        
+        // Convert sets to sorted arrays
+        Object.keys(facilities).forEach(name => {
+            facilities[name] = Array.from(facilities[name]).sort((a, b) => a - b);
+        });
+        
+        facilitiesData = facilities;
+        console.log('Facilities data loaded:', Object.keys(facilities).length, 'facilities');
+        
+    } catch (error) {
+        console.error('Failed to fetch facilities data:', error);
+        // Show a user-friendly message
+        showMessage('Note: Could not load facilities list from API. You can still enter facility names manually.', 'error');
+    }
 }
 
 // Setup event listeners
@@ -53,24 +142,82 @@ function addCourtField() {
     courtDiv.className = 'court-item';
     courtDiv.dataset.courtId = courtId;
     
+    // Get sorted facility names
+    const facilityNames = Object.keys(facilitiesData).sort();
+    
+    let facilityOptionsHtml = '<option value="">-- Select a facility --</option>';
+    facilityNames.forEach(name => {
+        facilityOptionsHtml += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+    });
+    
+    // If no facilities loaded, provide text input fallback
+    const facilitySelectHtml = facilityNames.length > 0 
+        ? `<select class="court-name" data-court-id="${courtId}" onchange="updateCourtNumbers(${courtId})">${facilityOptionsHtml}</select>`
+        : `<input type="text" placeholder="Tennis facility name (e.g., La Faluère)" class="court-name" data-court-id="${courtId}" onchange="updateCourtNumbers(${courtId})">`;
+    
     courtDiv.innerHTML = `
         <div class="court-header">
-            <input type="text" 
-                   placeholder="Tennis facility name (e.g., La Faluère)" 
-                   class="court-name"
-                   data-court-id="${courtId}">
+            ${facilitySelectHtml}
             <button type="button" class="btn-remove" onclick="removeCourtField(${courtId})">Remove</button>
         </div>
         <div class="court-numbers">
-            <label>Court numbers (comma-separated, e.g., 5,6,7,8,17,18,19,20,21):</label>
-            <input type="text" 
-                   placeholder="Leave empty for all courts" 
-                   class="court-numbers-input"
-                   data-court-id="${courtId}">
+            <label>Court numbers:</label>
+            <div class="court-numbers-container" data-court-id="${courtId}">
+                <p class="court-numbers-hint">Select a facility to see available courts</p>
+            </div>
         </div>
     `;
     
     container.appendChild(courtDiv);
+}
+
+// Update court numbers display when facility is selected
+function updateCourtNumbers(courtId) {
+    const facilitySelect = document.querySelector(`.court-name[data-court-id="${courtId}"]`);
+    const courtNumbersContainer = document.querySelector(`.court-numbers-container[data-court-id="${courtId}"]`);
+    
+    if (!facilitySelect || !courtNumbersContainer) return;
+    
+    const facilityName = facilitySelect.value.trim();
+    
+    if (!facilityName) {
+        courtNumbersContainer.innerHTML = '<p class="court-numbers-hint">Select a facility to see available courts</p>';
+        return;
+    }
+    
+    const courtNumbers = facilitiesData[facilityName];
+    
+    if (!courtNumbers || courtNumbers.length === 0) {
+        courtNumbersContainer.innerHTML = '<p class="court-numbers-hint">No court information available for this facility</p>';
+        return;
+    }
+    
+    // Create checkboxes for each court number
+    let html = '<div class="court-checkboxes">';
+    html += '<label class="select-all-label"><input type="checkbox" class="select-all-courts" data-court-id="' + courtId + '" onchange="toggleAllCourts(' + courtId + ')"> Select All</label>';
+    html += '<div class="court-checkboxes-grid">';
+    
+    courtNumbers.forEach(num => {
+        html += `
+            <label class="court-checkbox-label">
+                <input type="checkbox" class="court-checkbox" data-court-id="${courtId}" value="${num}">
+                Court ${num}
+            </label>
+        `;
+    });
+    
+    html += '</div></div>';
+    courtNumbersContainer.innerHTML = html;
+}
+
+// Toggle all courts selection
+function toggleAllCourts(courtId) {
+    const selectAllCheckbox = document.querySelector(`.select-all-courts[data-court-id="${courtId}"]`);
+    const courtCheckboxes = document.querySelectorAll(`.court-checkbox[data-court-id="${courtId}"]`);
+    
+    courtCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
 }
 
 // Remove court field
@@ -116,9 +263,10 @@ function saveSearch() {
         const name = courtEl.value.trim();
         if (name) {
             const courtId = courtEl.dataset.courtId;
-            const numbersInput = document.querySelector(`.court-numbers-input[data-court-id="${courtId}"]`);
-            const numbersStr = numbersInput.value.trim();
-            const numbers = numbersStr ? numbersStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)) : [];
+            
+            // Get selected court numbers from checkboxes
+            const checkedCheckboxes = document.querySelectorAll(`.court-checkbox[data-court-id="${courtId}"]:checked`);
+            const numbers = Array.from(checkedCheckboxes).map(cb => parseInt(cb.value)).filter(n => !isNaN(n));
             
             courts.push({
                 name: name,
@@ -193,10 +341,22 @@ function loadSearchIntoForm(searchId) {
         addCourtField();
         const lastCourtId = courtIdCounter - 1;
         const courtNameInput = document.querySelector(`.court-name[data-court-id="${lastCourtId}"]`);
-        const courtNumbersInput = document.querySelector(`.court-numbers-input[data-court-id="${lastCourtId}"]`);
         
-        if (courtNameInput) courtNameInput.value = court.name;
-        if (courtNumbersInput) courtNumbersInput.value = court.numbers.join(',');
+        if (courtNameInput) {
+            courtNameInput.value = court.name;
+            // Trigger update to show court checkboxes
+            updateCourtNumbers(lastCourtId);
+            
+            // After a short delay, check the appropriate boxes
+            setTimeout(() => {
+                court.numbers.forEach(num => {
+                    const checkbox = document.querySelector(`.court-checkbox[data-court-id="${lastCourtId}"][value="${num}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }, 100);
+        }
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
