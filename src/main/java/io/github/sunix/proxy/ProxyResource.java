@@ -177,7 +177,7 @@ public class ProxyResource {
         } catch (Exception e) {
             LOG.errorf(e, "Error proxying request to %s/%s", targetUrl, path);
             return Response.status(Response.Status.BAD_GATEWAY)
-                    .entity("Error proxying request: " + e.getMessage())
+                    .entity("Error proxying request to upstream service")
                     .build();
         }
     }
