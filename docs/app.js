@@ -7,7 +7,9 @@ const API_COATING_TYPES = ['96', '2095', '94', '1324', '2016', '92'];
 const API_IN_OUT_TYPES = ['V', 'F'];
 
 // CORS proxy URL - can be set to null to disable proxy
-// Using allOrigins as a free CORS proxy service
+// Using AllOrigins as a free CORS proxy service
+// Note: Most free CORS proxies only support GET requests, so this may not work
+// for POST endpoints. The code falls back to direct requests if the proxy fails.
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 // State
