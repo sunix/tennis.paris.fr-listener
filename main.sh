@@ -14,6 +14,9 @@ whenDay=${WHEN_DAY:-23}
 whenMonth=${WHEN_MONTH:-05}
 whenYear=${WHEN_YEAR:-2021}
 courts=${COURTS:-"Philippe Auguste,Candie,Thiéré,La Faluère"}
+courtNumbers=${COURT_NUMBERS:-""}
+coveredOnly=${COVERED_ONLY:-false}
+twoHours=${TWO_HOURS:-false}
 
 # Check if the configured date is in the past
 target_date=$(printf "%04d-%02d-%02d" "$whenYear" "$whenMonth" "$whenDay")
@@ -33,6 +36,10 @@ if [[ $target_timestamp -lt $current_timestamp ]]; then
   exit 0
 fi
 
+# Fetch data from API
+raw_json=$(curl -s 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map' \
+  --data-raw "hourRange=${hourRangeStart}-${hourRangeEnd}&when=${whenDay}%2F${whenMonth}%2F${whenYear}"'&selCoating%5B%5D=96&selCoating%5B%5D=2095&selCoating%5B%5D=94&selCoating%5B%5D=1324&selCoating%5B%5D=2016&selCoating%5B%5D=92&selInOut%5B%5D=V&selInOut%5B%5D=F')
+
 # Build jq filter for court names
 IFS=',' read -ra COURT_ARRAY <<< "$courts"
 jq_filter='[.features[] | select(.properties.available and ('
@@ -45,11 +52,27 @@ for court in "${COURT_ARRAY[@]}"; do
     jq_filter="${jq_filter} or .properties.general._nomSrtm==\"${court}\""
   fi
 done
-jq_filter="${jq_filter})) | .properties.general | {nom: ._nomSrtm, id: ._id}]"
+jq_filter="${jq_filter})) | {facility: .properties.general._nomSrtm, facilityId: .properties.general._id, courts: [.properties.courts[] | {courtNumber: ._formattedAirNum, courtName: ._airNom, covered: ._airCvt}]}]"
 
-json=$(curl -s 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map' \
-  --data-raw "hourRange=${hourRangeStart}-${hourRangeEnd}&when=${whenDay}%2F${whenMonth}%2F${whenYear}"'&selCoating%5B%5D=96&selCoating%5B%5D=2095&selCoating%5B%5D=94&selCoating%5B%5D=1324&selCoating%5B%5D=2016&selCoating%5B%5D=92&selInOut%5B%5D=V&selInOut%5B%5D=F' \
-| jq "$jq_filter")
+# Apply initial filter
+json=$(echo "$raw_json" | jq "$jq_filter")
+
+# Apply court number filter if specified
+if [ -n "$courtNumbers" ] && [ "$courtNumbers" != "{}" ]; then
+  json=$(echo "$json" | jq --argjson filters "$courtNumbers" '[.[] | . as $facility | .courts |= map(select(
+    ($filters[$facility.facility] // []) as $allowedNumbers |
+    if ($allowedNumbers | length) > 0 then
+      .courtNumber as $num | $allowedNumbers | index($num) != null
+    else
+      true
+    end
+  )) | select(.courts | length > 0)]')
+fi
+
+# Apply covered-only filter if specified
+if [ "$coveredOnly" = "true" ]; then
+  json=$(echo "$json" | jq '[.[] | .courts |= map(select(.covered == "V")) | select(.courts | length > 0)]')
+fi
 
 if [[ "$json" != "$(cat /tmp/tennis.json 2>/dev/null)" ]]
 then

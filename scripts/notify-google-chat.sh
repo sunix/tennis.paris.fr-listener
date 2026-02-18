@@ -46,6 +46,23 @@ HOUR_RANGE_END="${HOUR_RANGE_END:-22}"
 WHEN_DAY="${WHEN_DAY:-23}"
 WHEN_MONTH="${WHEN_MONTH:-05}"
 WHEN_YEAR="${WHEN_YEAR:-2021}"
+COVERED_ONLY="${COVERED_ONLY:-false}"
+COURT_NUMBERS="${COURT_NUMBERS:-}"
+
+# Parse the JSON output to create a readable message
+AVAILABLE_COURTS=""
+if [ "$TEXT" != "[]" ] && [ -n "$TEXT" ]; then
+  AVAILABLE_COURTS=$(echo "$TEXT" | jq -r '.[] | "• \(.facility): " + (.courts | map("Court \(.courtNumber)\(if .covered == "V" then " (covered)" else "" end)") | join(", "))')
+fi
+
+# Build additional filters info
+FILTERS=""
+if [ "$COVERED_ONLY" = "true" ]; then
+  FILTERS="${FILTERS}• Covered courts only\n"
+fi
+if [ -n "$COURT_NUMBERS" ] && [ "$COURT_NUMBERS" != "{}" ]; then
+  FILTERS="${FILTERS}• Specific court numbers filtered\n"
+fi
 
 # Build message with search details
 read -r -d '' MESSAGE << EOF || true
@@ -55,9 +72,9 @@ read -r -d '' MESSAGE << EOF || true
 • Courts: ${COURTS}
 • Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
 • Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
-
+${FILTERS}
 🎾 Available Courts:
-${TEXT}
+${AVAILABLE_COURTS}
 EOF
 
 # Build JSON payload properly using Python
