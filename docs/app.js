@@ -12,18 +12,65 @@ const API_IN_OUT_TYPES = ['V', 'F'];
 // for POST endpoints. The code falls back to direct requests if the proxy fails.
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
+// Fallback facilities data (used if API call fails due to CORS or network issues)
+const FALLBACK_FACILITIES = {
+    "Alain Mimoun": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Amandiers": [1, 2, 3, 4],
+    "Atlantique": [1, 2, 3, 4],
+    "Aurelle de Paladines": [1, 2],
+    "Bertrand Dauvin": [1, 2, 3, 4, 5, 6],
+    "Bobigny": [1, 2, 3, 4],
+    "Broquedis - Asnières": [1, 2, 3, 4],
+    "Candie": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Carnot": [1, 2, 3, 4],
+    "Château des Rentiers": [1, 2, 3, 4],
+    "Cordelières": [1, 2],
+    "Croix Nivert": [1, 2, 3, 4],
+    "Docteurs Déjerine": [1, 2, 3, 4],
+    "Dunois": [1, 2, 3, 4],
+    "Edouard Pailleron": [1, 2],
+    "Elisabeth": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Georges Carpentier": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    "Halle Fret": [1, 2, 3, 4],
+    "Henry de Montherlant": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "Jandelle": [1, 2, 3, 4],
+    "Jesse Owens": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Jules Ladoumègue": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "La Faluère": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+    "Léo Lagrange": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Max Rousié": [1, 2, 3, 4, 5, 6],
+    "Moureu - Baudricourt": [1, 2, 3, 4],
+    "NEUVE SAINT PIERRE": [1, 2, 3, 4],
+    "Niox": [1, 2, 3, 4],
+    "Padel Jules Ladoumègue": [1, 2, 3, 4],
+    "Paul Barruel": [1, 2, 3, 4, 5, 6],
+    "Philippe Auguste": [1, 2, 3, 4, 5, 6],
+    "Poissonniers": [1, 2, 3, 4],
+    "Poliveau": [1, 2, 3, 4, 5, 6],
+    "Poterne des Peupliers": [1, 2, 3, 4, 5, 6, 7, 8],
+    "Puteaux": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "René et André Mourlon": [1, 2, 3, 4, 5, 6],
+    "Renée Garilhe - ex Courcelles": [1, 2, 3, 4],
+    "Rigoulot - La Plaine": [1, 2, 3, 4, 5, 6],
+    "Sablonnière": [1, 2, 3, 4],
+    "Sept arpents": [1, 2, 3, 4, 5, 6],
+    "Suzanne Lenglen": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "Thiéré": [1, 2, 3, 4, 5, 6],
+    "Valeyre": [1, 2, 3, 4]
+};
+
 // State
 let searches = [];
 let courtIdCounter = 0;
 let facilitiesData = {}; // Store facility names and their available courts
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     loadSearches();
     renderSavedSearches();
     updateExportSelect();
     setupEventListeners();
-    fetchFacilitiesData(); // Fetch facilities on page load
+    await fetchFacilitiesData(); // Wait for facilities data to load
     addCourtField(); // Add one court field by default
     setDefaultDate();
 });
@@ -116,12 +163,13 @@ async function fetchFacilitiesData() {
         });
         
         facilitiesData = facilities;
-        console.log('Facilities data loaded:', Object.keys(facilities).length, 'facilities');
+        console.log('Facilities data loaded from API:', Object.keys(facilities).length, 'facilities');
         
     } catch (error) {
-        console.error('Failed to fetch facilities data:', error);
-        // Show a user-friendly message
-        showMessage('Note: Could not load facilities list from API. You can still enter facility names manually.', 'error');
+        console.warn('Failed to fetch facilities data from API, using fallback list:', error);
+        // Use fallback data
+        facilitiesData = FALLBACK_FACILITIES;
+        console.log('Using fallback facilities data:', Object.keys(facilitiesData).length, 'facilities');
     }
 }
 
