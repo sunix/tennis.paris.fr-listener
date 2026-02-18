@@ -222,21 +222,38 @@ header h1 {
 
 .court-checkboxes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 8px;
     margin-top: 10px;
 }
 
 .court-checkbox-label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     font-size: 0.9em;
     cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.court-checkbox-label:hover {
+    background-color: #f0f0f0;
+}
+
+.court-checkbox-label.covered {
+    background-color: #e8f4f8;
+}
+
+.court-checkbox-label.covered:hover {
+    background-color: #d0e9f2;
 }
 
 .court-checkbox-label input[type="checkbox"] {
     margin-right: 5px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .court-name {
