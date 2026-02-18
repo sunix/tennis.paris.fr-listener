@@ -1,5 +1,17 @@
 // Tennis Paris Listener - Search Configuration App
 
+// Constants for tennis.paris.fr API
+// Court surface types (selCoating): 96=Clay, 2095=Hard, 94=Synthetic, 1324=Carpet, 2016=Grass, 92=Other
+// Indoor/Outdoor (selInOut): V=Outdoor (Vert/Green), F=Indoor (Fermé/Closed)
+const API_COATING_TYPES = ['96', '2095', '94', '1324', '2016', '92'];
+const API_IN_OUT_TYPES = ['V', 'F'];
+
+// CORS proxy URL - can be set to null to disable proxy
+// Using AllOrigins as a free CORS proxy service
+// Note: Most free CORS proxies only support GET requests, so this may not work
+// for POST endpoints. The code falls back to direct requests if the proxy fails.
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
 // State
 let searches = [];
 let courtIdCounter = 0;
@@ -215,6 +227,7 @@ function renderSavedSearches() {
             <div class="saved-search-header">
                 <h3>${escapeHtml(search.name)}</h3>
                 <div class="saved-search-actions">
+                    <button class="btn-primary" onclick="executeQuery(${search.id})">Test Query</button>
                     <button class="btn-secondary" onclick="loadSearchIntoForm(${search.id})">Edit</button>
                     <button class="btn-danger" onclick="deleteSearch(${search.id})">Delete</button>
                 </div>
@@ -232,6 +245,7 @@ function renderSavedSearches() {
                 ${search.coveredOnly ? '<p><strong>✓</strong> Covered courts only</p>' : ''}
                 ${search.twoHours ? '<p><strong>✓</strong> Looking for 2 consecutive hours</p>' : ''}
             </div>
+            <div id="results-${search.id}" class="query-results"></div>
         </div>
     `).join('');
 }
@@ -346,4 +360,186 @@ function showMessage(text, type) {
     setTimeout(() => {
         message.remove();
     }, 5000);
+}
+
+// Execute query
+async function executeQuery(searchId) {
+    const search = searches.find(s => s.id === searchId);
+    if (!search) return;
+    
+    const resultsContainer = document.getElementById(`results-${searchId}`);
+    resultsContainer.innerHTML = '<div class="loading">⏳ Executing query...</div>';
+    
+    try {
+        // Build API URL
+        const apiUrl = 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map';
+        
+        // Fetch data from API with CORS proxy if available
+        const formData = new URLSearchParams();
+        formData.append('hourRange', `${search.hourRangeStart}-${search.hourRangeEnd}`);
+        formData.append('when', `${search.whenDay}/${search.whenMonth}/${search.whenYear}`);
+        
+        // Add coating and in/out types
+        API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
+        API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
+        
+        // Try with CORS proxy first, fallback to direct if proxy fails
+        let response;
+        let rawJson;
+        
+        if (CORS_PROXY) {
+            try {
+                // Use CORS proxy with POST data as query parameter
+                const fullUrl = `${apiUrl}?${formData.toString()}`;
+                const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(fullUrl)}`;
+                response = await fetch(proxiedUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    rawJson = await response.json();
+                }
+            } catch (proxyError) {
+                console.warn('CORS proxy failed, trying direct request:', proxyError);
+                // Fall through to direct request
+            }
+        }
+        
+        // If proxy didn't work or wasn't used, try direct request
+        if (!rawJson) {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            rawJson = await response.json();
+        }
+        
+        // Apply filters
+        let filteredResults = filterByFacilities(rawJson, search.courts);
+        filteredResults = filterByCourtNumbers(filteredResults, search.courts);
+        
+        if (search.coveredOnly) {
+            filteredResults = filterByCovered(filteredResults);
+        }
+        
+        // Display results
+        displayQueryResults(resultsContainer, filteredResults, search);
+        
+    } catch (error) {
+        let errorMessage = escapeHtml(error.message);
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('NetworkError')) {
+            errorMessage = 'Unable to connect to tennis.paris.fr API due to CORS restrictions. ' +
+                          'Try using a browser extension like "CORS Unblock" or "Allow CORS" to test queries. ' +
+                          'Note: The actual listener (main.sh) works correctly as it uses curl which bypasses CORS.';
+        }
+        resultsContainer.innerHTML = `<div class="error">❌ ${errorMessage}</div>`;
+    }
+}
+
+// Helper to extract facility name from API response
+function getFacilityName(feature) {
+    return feature.properties.general._nomSrtm;
+}
+
+// Helper to extract facility ID from API response
+function getFacilityId(feature) {
+    return feature.properties.general._id;
+}
+
+// Helper to check if facility is available from API response
+function isFacilityAvailable(feature) {
+    return feature.properties.available;
+}
+
+// Filter by facilities
+function filterByFacilities(rawJson, courts) {
+    const facilityNames = courts.map(c => c.name);
+    
+    return rawJson.features
+        .filter(feature => isFacilityAvailable(feature) && facilityNames.includes(getFacilityName(feature)))
+        .map(feature => ({
+            facility: getFacilityName(feature),
+            facilityId: getFacilityId(feature),
+            courts: feature.properties.courts.map(court => ({
+                courtNumber: court._formattedAirNum,
+                courtName: court._airNom,
+                covered: court._airCvt
+            }))
+        }));
+}
+
+// Filter by court numbers
+function filterByCourtNumbers(facilities, courtConfigs) {
+    return facilities.map(facility => {
+        const config = courtConfigs.find(c => c.name === facility.facility);
+        
+        if (!config || config.numbers.length === 0) {
+            return facility;
+        }
+        
+        return {
+            ...facility,
+            courts: facility.courts.filter(court => config.numbers.includes(court.courtNumber))
+        };
+    }).filter(facility => facility.courts.length > 0);
+}
+
+// Filter by covered courts
+function filterByCovered(facilities) {
+    return facilities.map(facility => ({
+        ...facility,
+        courts: facility.courts.filter(court => court.covered === 'V')
+    })).filter(facility => facility.courts.length > 0);
+}
+
+// Display query results
+function displayQueryResults(container, results, search) {
+    if (results.length === 0) {
+        container.innerHTML = `
+            <div class="query-results-content no-results">
+                <p>🔍 No courts available matching your criteria</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const totalCourts = results.reduce((sum, facility) => sum + facility.courts.length, 0);
+    
+    let html = `
+        <div class="query-results-content">
+            <h4>✅ Found ${totalCourts} available court${totalCourts !== 1 ? 's' : ''}</h4>
+    `;
+    
+    results.forEach(facility => {
+        html += `
+            <div class="facility-result">
+                <h5>🎾 ${escapeHtml(facility.facility)}</h5>
+                <ul>
+        `;
+        
+        facility.courts.forEach(court => {
+            const coveredIcon = court.covered === 'V' ? '☂️' : '☀️';
+            html += `<li>${coveredIcon} Court ${court.courtNumber}: ${escapeHtml(court.courtName)}</li>`;
+        });
+        
+        html += `
+                </ul>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
