@@ -12,6 +12,7 @@ Help me to get notified once a tennis court is available
 - 🎯 Filter by specific court numbers (e.g., courts 5-8, 17-21 at La Faluère)
 - ☂️ Filter for covered courts only
 - 🌐 **Web UI for easy configuration** - Configure your searches in a user-friendly web interface
+- 🚀 **PR Preview Deployments** - Test changes with `/preview` command in pull requests
 
 ## Web Configuration UI
 
@@ -201,6 +202,38 @@ These scripts are designed to be:
 - **Reusable**: Can be run locally or in CI/CD
 - **Testable**: Unit tests are provided in `test_scripts.sh`
 - **Modular**: Each script has a single responsibility
+
+## PR Preview Deployments
+
+The repository supports preview deployments for pull requests using [Surge.sh](https://surge.sh). This allows you to test changes to the web UI before merging them.
+
+### How to Use
+
+1. Open or navigate to a pull request
+2. Comment `/preview` on the PR
+3. The GitHub Action will automatically:
+   - Build the docs site
+   - Deploy it to `https://pr-{number}-tennis-paris-preview.surge.sh`
+   - Comment back with the preview URL
+4. Visit the preview URL to test your changes
+   - A banner will appear at the top indicating it's a preview site
+   - The banner includes a link back to the PR
+
+### Setup (Repository Maintainers)
+
+To enable preview deployments, you need to configure a `SURGE_TOKEN` secret:
+
+1. Install Surge CLI: `npm install -g surge`
+2. Login to Surge: `surge login`
+3. Generate a token: `surge token`
+4. Add the token as a GitHub secret:
+   - Go to Repository Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `SURGE_TOKEN`
+   - Value: Paste the token from step 3
+   - Click "Add secret"
+
+Once configured, any contributor can use the `/preview` command on their pull requests.
 
 ## License
 
