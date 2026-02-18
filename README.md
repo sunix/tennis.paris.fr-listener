@@ -2,6 +2,28 @@
 
 Help me to get notified once a tennis court is available
 
+## Important Limitation ⚠️
+
+**Please read this carefully before using the listener:**
+
+The tennis.paris.fr API only provides **facility-level availability**, not court-level availability. This means:
+
+- When the listener reports courts, it means the **facility has SOME availability** during your requested time range
+- It does **NOT** mean all listed courts are available at your specific requested time
+- You **MUST verify** specific court and time availability on the [tennis.paris.fr website](https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche)
+
+The listener is useful for:
+- ✅ Getting notified when a facility has availability (so you can quickly check the website)
+- ✅ Filtering by facility, court numbers, and covered/outdoor preferences
+- ✅ Reducing the number of facilities you need to manually check
+
+The listener is NOT:
+- ❌ A guarantee that specific courts are available
+- ❌ A replacement for checking the actual booking website
+- ❌ Able to show per-court, per-timeslot availability
+
+**Recommendation:** Use this listener as an alert system. When you receive a notification, immediately check the tennis.paris.fr website to see actual court-level availability and book your desired timeslot.
+
 ## Features
 
 - 🎾 Checks tennis court availability on tennis.paris.fr
