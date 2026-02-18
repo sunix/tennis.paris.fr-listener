@@ -1,8 +1,10 @@
+---
 name: Preview PR on Surge
 
 on:
   issue_comment:
-    types: [created]
+    types:
+      - created
 
 permissions:
   contents: read
@@ -34,8 +36,12 @@ jobs:
         with:
           script: |
             const prNumber = Number(process.env.PR_NUMBER);
-            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const body = `⏳ **Preview build in progress...**\n\n🔗 [View workflow run](${runUrl})`;
+            const serverUrl = process.env.GITHUB_SERVER_URL;
+            const repo = process.env.GITHUB_REPOSITORY;
+            const runId = process.env.GITHUB_RUN_ID;
+            const runUrl = `${serverUrl}/${repo}/actions/runs/${runId}`;
+            const body = `⏳ **Preview build in progress...**\n\n` +
+                         `🔗 [View workflow run](${runUrl})`;
             const { data: comment } = await github.rest.issues.createComment({
               issue_number: prNumber,
               owner: context.repo.owner,
@@ -65,15 +71,16 @@ jobs:
           if [ -z "$SURGE_TOKEN" ]; then
             echo "❌ ERROR: SURGE_TOKEN is not set!"
             echo ""
-            echo "SURGE_TOKEN is mandatory to deploy to surge.sh with an account."
+            echo "SURGE_TOKEN is mandatory to deploy to surge.sh."
             echo ""
             echo "To generate a token:"
             echo "  1. Install surge: npm install -g surge"
             echo "  2. Login: surge login"
             echo "  3. Generate token: surge token"
             echo ""
-            echo "Then add the token as a secret in GitHub Actions settings:"
-            echo "  Repository Settings > Secrets and variables > Actions > New repository secret"
+            echo "Then add the token as a secret in GitHub Actions:"
+            echo "  Repository Settings > Secrets and variables >"
+            echo "  Actions > New repository secret"
             echo "  Name: SURGE_TOKEN"
             echo "  Value: <your token from 'surge token' command>"
             echo ""
@@ -83,26 +90,37 @@ jobs:
 
       - name: Inject preview banner
         run: |
-          # Inject preview banner script into index.html
+          # Create preview banner script
           PR_NUMBER="${{ env.PR_NUMBER }}"
-          PREVIEW_BANNER_SCRIPT='<script>
-            (function() {
-              const urlParams = new URLSearchParams(window.location.search);
-              const prNumber = urlParams.get("pr") || "'$PR_NUMBER'";
-              if (prNumber && window.location.hostname.includes("surge.sh")) {
-                const banner = document.createElement("div");
-                banner.id = "preview-banner";
-                banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; z-index: 10000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, '\''Segoe UI'\'', Roboto, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 14px;";
-                banner.innerHTML = '\''<strong>🔍 Preview Site</strong> — This is a preview deployment for <a href="https://github.com/sunix/tennis.paris.fr-listener/pull/'\''" + prNumber + '\'' " style="color: #ffd700; text-decoration: underline;" target="_blank">PR #'\''" + prNumber + '\''</a>'\'';
-                document.body.insertBefore(banner, document.body.firstChild);
-                document.body.style.paddingTop = banner.offsetHeight + "px";
-              }
-            })();
-          </script>'
-          
-          # Insert the script before closing </body> tag in index.html
-          sed -i "s|</body>|$PREVIEW_BANNER_SCRIPT\n</body>|" docs/index.html
-          
+          REPO_URL="https://github.com/sunix/tennis.paris.fr-listener"
+
+          cat > /tmp/preview-banner.js << 'BANNER_EOF'
+(function() {
+  const prNum = "PR_NUM_PLACEHOLDER";
+  if (window.location.hostname.includes("surge.sh")) {
+    const banner = document.createElement("div");
+    banner.id = "preview-banner";
+    banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; z-index: 10000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 14px;";
+    const prUrl = "REPO_URL_PLACEHOLDER/pull/" + prNum;
+    banner.innerHTML = '<strong>🔍 Preview Site</strong> — This is a preview deployment for <a href="' + prUrl + '" style="color: #ffd700; text-decoration: underline;" target="_blank">PR #' + prNum + '</a>';
+    document.body.insertBefore(banner, document.body.firstChild);
+    document.body.style.paddingTop = banner.offsetHeight + "px";
+  }
+})();
+BANNER_EOF
+
+          # Replace placeholders
+          sed -i "s|PR_NUM_PLACEHOLDER|$PR_NUMBER|g" /tmp/preview-banner.js
+          sed -i "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" /tmp/preview-banner.js
+
+          # Inject into HTML using awk
+          awk -v script="$(cat /tmp/preview-banner.js)" \
+            '/^<\/body>$/ { print "<script>"; print script; print "</script>" } \
+             { print }' docs/index.html > /tmp/index-with-banner.html
+
+          # Replace original file
+          mv /tmp/index-with-banner.html docs/index.html
+
           echo "✓ Preview banner injected"
 
       - name: Deploy to Surge
@@ -110,9 +128,9 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         run: |
           set -euo pipefail
-          export DEPLOY_DOMAIN="pr-${{ env.PR_NUMBER }}-tennis-paris-preview.surge.sh"
-          surge ./docs --domain "$DEPLOY_DOMAIN" --token "$SURGE_TOKEN"
-          echo "DEPLOY_URL=https://$DEPLOY_DOMAIN" >> $GITHUB_ENV
+          DOMAIN="pr-${{ env.PR_NUMBER }}-tennis-paris-preview.surge.sh"
+          surge ./docs --domain "$DOMAIN" --token "$SURGE_TOKEN"
+          echo "DEPLOY_URL=https://$DOMAIN" >> $GITHUB_ENV
 
       - name: Update PR comment with preview link
         if: success()
@@ -124,7 +142,8 @@ jobs:
           script: |
             const commentId = Number(process.env.COMMENT_ID);
             const previewUrl = process.env.PREVIEW_URL || 'unavailable';
-            const body = `🚀 **Preview deployed successfully!**\n\n🌐 Preview: [${previewUrl}](${previewUrl})`;
+            const body = `🚀 **Preview deployed successfully!**\n\n` +
+                         `🌐 Preview: [${previewUrl}](${previewUrl})`;
             await github.rest.issues.updateComment({
               comment_id: commentId,
               owner: context.repo.owner,
@@ -140,8 +159,12 @@ jobs:
         with:
           script: |
             const commentId = Number(process.env.COMMENT_ID);
-            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const body = `❌ **Preview build failed.**\n\n🔗 [View workflow run](${runUrl})`;
+            const serverUrl = process.env.GITHUB_SERVER_URL;
+            const repo = process.env.GITHUB_REPOSITORY;
+            const runId = process.env.GITHUB_RUN_ID;
+            const runUrl = `${serverUrl}/${repo}/actions/runs/${runId}`;
+            const body = `❌ **Preview build failed.**\n\n` +
+                         `🔗 [View workflow run](${runUrl})`;
             await github.rest.issues.updateComment({
               comment_id: commentId,
               owner: context.repo.owner,
