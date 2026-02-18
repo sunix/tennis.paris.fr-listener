@@ -6,10 +6,13 @@
 # Build stage
 FROM maven:3.9.5-eclipse-temurin-17 AS build
 WORKDIR /build
+
+# Update CA certificates to fix SSL issues
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+
 COPY pom.xml .
-RUN mvn dependency:go-offline
 COPY src ./src
-RUN mvn package -DskipTests
+RUN mvn package -DskipTests -Dmaven.wagon.http.ssl.insecure=false
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine

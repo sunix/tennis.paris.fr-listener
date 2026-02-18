@@ -137,6 +137,8 @@ mvn test
 docker build -t tennis-paris-proxy .
 ```
 
+> **Note:** If you encounter SSL/certificate errors during local Docker builds, this is a known issue in some environments. The Dockerfile is designed to work correctly on Render's infrastructure. For local development, use `mvn quarkus:dev` instead.
+
 ### Running with Docker
 
 ```bash
