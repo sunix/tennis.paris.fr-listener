@@ -6,6 +6,10 @@
 const API_COATING_TYPES = ['96', '2095', '94', '1324', '2016', '92'];
 const API_IN_OUT_TYPES = ['V', 'F'];
 
+// CORS proxy URL - can be set to null to disable proxy
+// Using allOrigins as a free CORS proxy service
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
 // State
 let searches = [];
 let courtIdCounter = 0;
@@ -365,7 +369,10 @@ async function executeQuery(searchId) {
     resultsContainer.innerHTML = '<div class="loading">⏳ Executing query...</div>';
     
     try {
-        // Fetch data from API
+        // Build API URL
+        const apiUrl = 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map';
+        
+        // Fetch data from API with CORS proxy if available
         const formData = new URLSearchParams();
         formData.append('hourRange', `${search.hourRangeStart}-${search.hourRangeEnd}`);
         formData.append('when', `${search.whenDay}/${search.whenMonth}/${search.whenYear}`);
@@ -374,19 +381,47 @@ async function executeQuery(searchId) {
         API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
         API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
         
-        const response = await fetch('https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData.toString()
-        });
+        // Try with CORS proxy first, fallback to direct if proxy fails
+        let response;
+        let rawJson;
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (CORS_PROXY) {
+            try {
+                // Use CORS proxy with POST data as query parameter
+                const fullUrl = `${apiUrl}?${formData.toString()}`;
+                const proxiedUrl = `${CORS_PROXY}${encodeURIComponent(fullUrl)}`;
+                response = await fetch(proxiedUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    rawJson = await response.json();
+                }
+            } catch (proxyError) {
+                console.warn('CORS proxy failed, trying direct request:', proxyError);
+                // Fall through to direct request
+            }
         }
         
-        const rawJson = await response.json();
+        // If proxy didn't work or wasn't used, try direct request
+        if (!rawJson) {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            rawJson = await response.json();
+        }
         
         // Apply filters
         let filteredResults = filterByFacilities(rawJson, search.courts);
@@ -401,10 +436,10 @@ async function executeQuery(searchId) {
         
     } catch (error) {
         let errorMessage = escapeHtml(error.message);
-        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-            errorMessage = 'Unable to connect to tennis.paris.fr API. This is likely due to CORS restrictions. ' +
-                          'Note: The actual listener (main.sh) will work correctly as it uses curl which bypasses CORS. ' +
-                          'This test feature is limited when run from a browser.';
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('NetworkError')) {
+            errorMessage = 'Unable to connect to tennis.paris.fr API due to CORS restrictions. ' +
+                          'Try using a browser extension like "CORS Unblock" or "Allow CORS" to test queries. ' +
+                          'Note: The actual listener (main.sh) works correctly as it uses curl which bypasses CORS.';
         }
         resultsContainer.innerHTML = `<div class="error">❌ ${errorMessage}</div>`;
     }
