@@ -92,7 +92,7 @@ jobs:
         run: |
           # Create preview banner script
           PR_NUMBER="${{ env.PR_NUMBER }}"
-          REPO_URL="https://github.com/sunix/tennis.paris.fr-listener"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
 
           cat > /tmp/preview-banner.js << 'BANNER_EOF'
 (function() {
@@ -113,9 +113,9 @@ BANNER_EOF
           sed -i "s|PR_NUM_PLACEHOLDER|$PR_NUMBER|g" /tmp/preview-banner.js
           sed -i "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" /tmp/preview-banner.js
 
-          # Inject into HTML using awk
+          # Inject into HTML using awk (before closing body tag)
           awk -v script="$(cat /tmp/preview-banner.js)" \
-            '/^<\/body>$/ { print "<script>"; print script; print "</script>" } \
+            '/<\/body>/ { print "<script>"; print script; print "</script>" } \
              { print }' docs/index.html > /tmp/index-with-banner.html
 
           # Replace original file
