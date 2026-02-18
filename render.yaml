@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tennis-paris-cors-proxy
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /q/health
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: https://sunix.github.io
+      - key: PROXY_TOKEN
+        generateValue: true
+        sync: false

@@ -13,6 +13,19 @@ Help me to get notified once a tennis court is available
 - ☂️ Filter for covered courts only
 - 🌐 **Web UI for easy configuration** - Configure your searches in a user-friendly web interface
 - 🚀 **PR Preview Deployments** - Test changes with `/preview` command in pull requests
+- 🔄 **CORS Proxy** - Quarkus-based proxy service for GitHub Pages frontend to communicate with tennis.paris.fr
+
+## CORS Proxy Service
+
+This repository includes a Quarkus-based HTTP proxy service that enables the GitHub Pages frontend to communicate with tennis.paris.fr without CORS restrictions.
+
+📖 **[Read the full CORS Proxy documentation](docs/PROXY.md)**
+
+The proxy service:
+- Forwards requests from `/api/*` to `https://tennis.paris.fr/*`
+- Handles CORS preflight requests
+- Includes optional token-based authentication
+- Deployable on Render (free tier)
 
 ## Web Configuration UI
 
