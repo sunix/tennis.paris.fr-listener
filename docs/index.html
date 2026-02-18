@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Paris Listener - Search Configuration</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎾 Tennis Paris Listener</h1>
+            <p class="subtitle">Configure your tennis court search criteria</p>
+        </header>
+
+        <main>
+            <!-- Search Criteria Form -->
+            <section class="card">
+                <h2>Search Criteria</h2>
+                
+                <div class="form-group">
+                    <label for="searchName">Search Name</label>
+                    <input type="text" id="searchName" placeholder="e.g., My Morning Search" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="whenDay">Date</label>
+                    <div class="date-inputs">
+                        <input type="number" id="whenDay" placeholder="Day" min="1" max="31" required>
+                        <input type="number" id="whenMonth" placeholder="Month" min="1" max="12" required>
+                        <input type="number" id="whenYear" placeholder="Year" min="2024" max="2030" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hourRangeStart">Time Range</label>
+                    <div class="time-inputs">
+                        <input type="number" id="hourRangeStart" placeholder="Start (9)" min="0" max="23" value="9">
+                        <span>to</span>
+                        <input type="number" id="hourRangeEnd" placeholder="End (22)" min="0" max="23" value="22">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="coveredOnly">
+                        Covered courts only
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="twoHours">
+                        Look for 2 consecutive hours
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="courts">Tennis Facilities</label>
+                    <div id="courtsContainer">
+                        <!-- Courts will be added dynamically -->
+                    </div>
+                    <button type="button" class="btn-secondary" id="addCourtBtn">+ Add Facility</button>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-primary" id="saveBtn">Save Search</button>
+                    <button type="button" class="btn-secondary" id="clearBtn">Clear Form</button>
+                </div>
+            </section>
+
+            <!-- Saved Searches -->
+            <section class="card">
+                <h2>Saved Searches</h2>
+                <div id="savedSearches">
+                    <p class="empty-state">No saved searches yet. Create one above!</p>
+                </div>
+            </section>
+
+            <!-- Export to .env -->
+            <section class="card">
+                <h2>Export for Listener</h2>
+                <p>Select a saved search to export to .env format:</p>
+                <select id="exportSelect">
+                    <option value="">-- Select a search --</option>
+                </select>
+                <button type="button" class="btn-primary" id="exportBtn">Copy .env Format</button>
+                <textarea id="envOutput" readonly placeholder="Select a search and click 'Copy .env Format' to see the output here..."></textarea>
+            </section>
+        </main>
+
+        <footer>
+            <p>Made for tennis.paris.fr-listener | <a href="https://github.com/sunix/tennis.paris.fr-listener" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

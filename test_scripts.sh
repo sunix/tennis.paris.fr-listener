@@ -219,7 +219,8 @@ test_notify_json_payload() {
     echo "Test 11: notify-google-chat.sh generates valid JSON payload"
     
     local test_output="$TEST_DIR/output6.txt"
-    echo '[{"nom":"Test Court","id":"123"}]' > "$test_output"
+    # Use new JSON format with facility and courts
+    echo '[{"facility":"Test Court","facilityId":123,"courts":[{"courtNumber":1,"courtName":"Court n° 01","covered":"V"}]}]' > "$test_output"
     
     # We can't actually send to webhook, but we can check that it generates payload
     output=$(./scripts/notify-google-chat.sh "$test_output" "https://httpbin.org/post" 2>&1) || true

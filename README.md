@@ -9,6 +9,19 @@ Help me to get notified once a tennis court is available
 - 🔔 Sends notifications to Google Chat when availability changes
 - ⚙️ Configurable via environment variables
 - 🛡️ Smart change detection to avoid duplicate notifications
+- 🎯 Filter by specific court numbers (e.g., courts 5-8, 17-21 at La Faluère)
+- ☂️ Filter for covered courts only
+- 🌐 **Web UI for easy configuration** - Configure your searches in a user-friendly web interface
+
+## Web Configuration UI
+
+Visit the [Tennis Paris Listener Configuration Page](https://sunix.github.io/tennis.paris.fr-listener/) to:
+- Create and save multiple search configurations
+- Select specific court numbers for each facility
+- Filter for covered courts only
+- Export configurations to `.env` format for use with the listener
+
+The web app saves your configurations in your browser's local storage, so you can manage multiple search criteria and easily copy them to your `.env` file.
 
 ## Configuration
 
@@ -33,6 +46,12 @@ Help me to get notified once a tennis court is available
    WHEN_DAY=23
    WHEN_MONTH=05
    WHEN_YEAR=2021
+   
+   # Optional: Filter by specific court numbers (JSON format)
+   COURT_NUMBERS='{"La Faluère": [5,6,7,8,17,18,19,20,21], "Alain Mimoun": [1,2,3]}'
+   
+   # Optional: Filter for covered courts only
+   COVERED_ONLY=true
    ```
 
 3. Run the listener:
@@ -50,6 +69,9 @@ Help me to get notified once a tennis court is available
 | `WHEN_DAY` | Day to check | `23` | `23` |
 | `WHEN_MONTH` | Month to check | `05` | `05` (May) |
 | `WHEN_YEAR` | Year to check | `2021` | `2021` |
+| `COURT_NUMBERS` | JSON object specifying court numbers per facility | - | `'{"La Faluère": [5,6,7,8], "Alain Mimoun": [1,2,3]}'` |
+| `COVERED_ONLY` | Filter for covered courts only | `false` | `true` |
+| `TWO_HOURS` | Look for 2 consecutive hours (future feature) | `false` | `true` |
 | `GOOGLE_CHAT_WEBHOOK` | Google Chat webhook URL (for GitHub Actions) | - | `https://chat.googleapis.com/v1/spaces/...` |
 
 ## GitHub Actions Setup
