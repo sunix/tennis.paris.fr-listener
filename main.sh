@@ -58,7 +58,13 @@ jq_filter="${jq_filter})) | {facility: .properties.general._nomSrtm, facilityId:
 json=$(echo "$raw_json" | jq "$jq_filter")
 
 # Apply court number filter if specified
+# Format: COURT_NUMBERS='{"La Faluère": [5,6,7,8,17,18,19,20,21], "Alain Mimoun": [1,2,3]}'
 if [ -n "$courtNumbers" ] && [ "$courtNumbers" != "{}" ]; then
+  # For each facility, filter courts to only include the specified court numbers
+  # - Get the list of allowed court numbers for each facility from $filters
+  # - If a facility has allowed numbers, keep only courts whose number is in that list
+  # - If a facility has no allowed numbers specified, keep all courts for that facility
+  # - Remove facilities that end up with no courts after filtering
   json=$(echo "$json" | jq --argjson filters "$courtNumbers" '[.[] | . as $facility | .courts |= map(select(
     ($filters[$facility.facility] // []) as $allowedNumbers |
     if ($allowedNumbers | length) > 0 then
