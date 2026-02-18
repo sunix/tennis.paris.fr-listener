@@ -780,8 +780,9 @@ async function executeQuery(searchId) {
         
         if (CORS_PROXY) {
             try {
-                // Use CORS proxy - replace tennis.paris.fr with proxy URL
-                const proxiedUrl = apiUrl.replace('https://tennis.paris.fr', CORS_PROXY);
+                // Use CORS proxy - construct proxy URL by extracting path from tennis.paris.fr
+                const tennisUrl = new URL(apiUrl);
+                const proxiedUrl = `${CORS_PROXY}${tennisUrl.pathname}${tennisUrl.search}`;
                 response = await fetch(proxiedUrl, {
                     method: 'POST',
                     headers: {
