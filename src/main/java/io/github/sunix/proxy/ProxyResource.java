@@ -1,5 +1,6 @@
 package io.github.sunix.proxy;
 
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -28,6 +29,9 @@ public class ProxyResource {
     @ConfigProperty(name = "proxy.token")
     Optional<String> proxyToken;
 
+    @ConfigProperty(name = "quarkus.http.cors.origins")
+    String allowedOrigin;
+
     private final HttpClient httpClient;
 
     public ProxyResource() {
@@ -36,12 +40,18 @@ public class ProxyResource {
                 .build();
     }
 
+    @PreDestroy
+    public void cleanup() {
+        // HttpClient executor is automatically shut down when not in use
+        LOG.info("ProxyResource shutting down");
+    }
+
     @OPTIONS
     @Path("{path:.*}")
     public Response handlePreflight(@PathParam("path") String path) {
         LOG.infof("Handling OPTIONS preflight for path: %s", path);
         return Response.noContent()
-                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Origin", allowedOrigin)
                 .header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
                 .header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Proxy-Token")
                 .header("Access-Control-Max-Age", "86400")
