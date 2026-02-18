@@ -31,9 +31,12 @@ function setDefaultDate() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    document.getElementById('whenDay').value = tomorrow.getDate();
-    document.getElementById('whenMonth').value = tomorrow.getMonth() + 1;
-    document.getElementById('whenYear').value = tomorrow.getFullYear();
+    // Format date as YYYY-MM-DD for input[type="date"]
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    
+    document.getElementById('whenDate').value = `${year}-${month}-${day}`;
 }
 
 // Setup event listeners
@@ -90,10 +93,16 @@ function saveSearch() {
         return;
     }
     
-    // Get date
-    const whenDay = parseInt(document.getElementById('whenDay').value);
-    const whenMonth = parseInt(document.getElementById('whenMonth').value);
-    const whenYear = parseInt(document.getElementById('whenYear').value);
+    // Get date from date picker (format: YYYY-MM-DD)
+    const dateValue = document.getElementById('whenDate').value;
+    
+    if (!dateValue) {
+        showMessage('Please select a date', 'error');
+        return;
+    }
+    
+    // Parse the date value
+    const [whenYear, whenMonth, whenDay] = dateValue.split('-').map(num => parseInt(num, 10));
     
     if (!whenDay || !whenMonth || !whenYear) {
         showMessage('Please enter a valid date', 'error');
@@ -177,9 +186,13 @@ function loadSearchIntoForm(searchId) {
     if (!search) return;
     
     document.getElementById('searchName').value = search.name;
-    document.getElementById('whenDay').value = search.whenDay;
-    document.getElementById('whenMonth').value = search.whenMonth;
-    document.getElementById('whenYear').value = search.whenYear;
+    
+    // Format date for input[type="date"] (YYYY-MM-DD)
+    const year = search.whenYear;
+    const month = String(search.whenMonth).padStart(2, '0');
+    const day = String(search.whenDay).padStart(2, '0');
+    document.getElementById('whenDate').value = `${year}-${month}-${day}`;
+    
     document.getElementById('hourRangeStart').value = search.hourRangeStart;
     document.getElementById('hourRangeEnd').value = search.hourRangeEnd;
     document.getElementById('coveredOnly').checked = search.coveredOnly;
