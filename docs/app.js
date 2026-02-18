@@ -215,6 +215,7 @@ function renderSavedSearches() {
             <div class="saved-search-header">
                 <h3>${escapeHtml(search.name)}</h3>
                 <div class="saved-search-actions">
+                    <button class="btn-primary" onclick="executeQuery(${search.id})">Test Query</button>
                     <button class="btn-secondary" onclick="loadSearchIntoForm(${search.id})">Edit</button>
                     <button class="btn-danger" onclick="deleteSearch(${search.id})">Delete</button>
                 </div>
@@ -232,6 +233,7 @@ function renderSavedSearches() {
                 ${search.coveredOnly ? '<p><strong>✓</strong> Covered courts only</p>' : ''}
                 ${search.twoHours ? '<p><strong>✓</strong> Looking for 2 consecutive hours</p>' : ''}
             </div>
+            <div id="results-${search.id}" class="query-results"></div>
         </div>
     `).join('');
 }
@@ -346,4 +348,144 @@ function showMessage(text, type) {
     setTimeout(() => {
         message.remove();
     }, 5000);
+}
+
+// Execute query
+async function executeQuery(searchId) {
+    const search = searches.find(s => s.id === searchId);
+    if (!search) return;
+    
+    const resultsContainer = document.getElementById(`results-${searchId}`);
+    resultsContainer.innerHTML = '<div class="loading">⏳ Executing query...</div>';
+    
+    try {
+        // Fetch data from API
+        const formData = new URLSearchParams();
+        formData.append('hourRange', `${search.hourRangeStart}-${search.hourRangeEnd}`);
+        formData.append('when', `${search.whenDay}/${search.whenMonth}/${search.whenYear}`);
+        formData.append('selCoating[]', '96');
+        formData.append('selCoating[]', '2095');
+        formData.append('selCoating[]', '94');
+        formData.append('selCoating[]', '1324');
+        formData.append('selCoating[]', '2016');
+        formData.append('selCoating[]', '92');
+        formData.append('selInOut[]', 'V');
+        formData.append('selInOut[]', 'F');
+        
+        const response = await fetch('https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString()
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const rawJson = await response.json();
+        
+        // Apply filters
+        let filteredResults = filterByFacilities(rawJson, search.courts);
+        filteredResults = filterByCourtNumbers(filteredResults, search.courts);
+        
+        if (search.coveredOnly) {
+            filteredResults = filterByCovered(filteredResults);
+        }
+        
+        // Display results
+        displayQueryResults(resultsContainer, filteredResults, search);
+        
+    } catch (error) {
+        let errorMessage = escapeHtml(error.message);
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+            errorMessage = 'Unable to connect to tennis.paris.fr API. This is likely due to CORS restrictions. ' +
+                          'Note: The actual listener (main.sh) will work correctly as it uses curl which bypasses CORS. ' +
+                          'This test feature is limited when run from a browser.';
+        }
+        resultsContainer.innerHTML = `<div class="error">❌ ${errorMessage}</div>`;
+    }
+}
+
+// Filter by facilities
+function filterByFacilities(rawJson, courts) {
+    const facilityNames = courts.map(c => c.name);
+    
+    return rawJson.features
+        .filter(feature => feature.properties.available && facilityNames.includes(feature.properties.general._nomSrtm))
+        .map(feature => ({
+            facility: feature.properties.general._nomSrtm,
+            facilityId: feature.properties.general._id,
+            courts: feature.properties.courts.map(court => ({
+                courtNumber: court._formattedAirNum,
+                courtName: court._airNom,
+                covered: court._airCvt
+            }))
+        }));
+}
+
+// Filter by court numbers
+function filterByCourtNumbers(facilities, courtConfigs) {
+    return facilities.map(facility => {
+        const config = courtConfigs.find(c => c.name === facility.facility);
+        
+        if (!config || config.numbers.length === 0) {
+            return facility;
+        }
+        
+        return {
+            ...facility,
+            courts: facility.courts.filter(court => config.numbers.includes(court.courtNumber))
+        };
+    }).filter(facility => facility.courts.length > 0);
+}
+
+// Filter by covered courts
+function filterByCovered(facilities) {
+    return facilities.map(facility => ({
+        ...facility,
+        courts: facility.courts.filter(court => court.covered === 'V')
+    })).filter(facility => facility.courts.length > 0);
+}
+
+// Display query results
+function displayQueryResults(container, results, search) {
+    if (results.length === 0) {
+        container.innerHTML = `
+            <div class="query-results-content no-results">
+                <p>🔍 No courts available matching your criteria</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const totalCourts = results.reduce((sum, facility) => sum + facility.courts.length, 0);
+    
+    let html = `
+        <div class="query-results-content">
+            <h4>✅ Found ${totalCourts} available court${totalCourts !== 1 ? 's' : ''}</h4>
+    `;
+    
+    results.forEach(facility => {
+        html += `
+            <div class="facility-result">
+                <h5>🎾 ${escapeHtml(facility.facility)}</h5>
+                <ul>
+        `;
+        
+        facility.courts.forEach(court => {
+            const coveredIcon = court.covered === 'V' ? '☂️' : '☀️';
+            html += `<li>${coveredIcon} Court ${court.courtNumber}: ${escapeHtml(court.courtName)}</li>`;
+        });
+        
+        html += `
+                </ul>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
