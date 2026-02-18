@@ -1,0 +1,20 @@
+{
+  "name": "tennis-paris-listener",
+  "version": "1.0.0",
+  "description": "Tennis court availability listener for tennis.paris.fr",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node main.js",
+    "test": "./test_main.sh && node test_main.test.js"
+  },
+  "keywords": ["tennis", "paris", "availability", "listener"],
+  "author": "sunix",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

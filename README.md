@@ -90,8 +90,17 @@ The web app saves your configurations in your browser's local storage, so you ca
    COVERED_ONLY=true
    ```
 
-3. Run the listener:
+3. Install Node.js dependencies:
    ```bash
+   npm install
+   ```
+
+4. Run the listener:
+   ```bash
+   # Node.js version (recommended)
+   ./main.js
+   
+   # Or Bash version (legacy, will be deprecated)
    ./main.sh
    ```
 
@@ -151,18 +160,36 @@ You can manually trigger the workflow:
 
 ## Requirements
 
+- **Node.js 14+** (for main.js - recommended)
+- `npm` (for installing Node.js dependencies)
+
+**Legacy Bash version** (main.sh - being deprecated):
 - `bash`
 - `curl`
 - `jq` (JSON processor)
-- `python3` (for GitHub Actions notifications)
+
+**For notifications**:
+- `python3` (for Google Chat notifications)
+
+## Code Architecture
+
+The project uses a shared JavaScript module for consistency:
+
+- **`lib/tennis-api.js`**: Shared module for API requests and filtering logic
+- **`main.js`**: Node.js CLI application (uses tennis-api.js)
+- **`main.sh`**: Legacy Bash version (will be deprecated)
+- **`docs/app.js`**: Web UI (can be updated to use tennis-api.js)
+
+This architecture ensures that the same filtering logic is used across all interfaces.
 
 ## Testing
 
 The project includes unit tests to verify the court list functionality. To run the tests:
 
 ```bash
-./test_main.sh      # Tests for main.sh
-./test_scripts.sh   # Tests for workflow scripts
+./test_main.test.js  # Tests for main.js (Node.js version)
+./test_main.sh       # Tests for main.sh (Bash version)
+./test_scripts.sh    # Tests for workflow scripts
 ```
 
 The test suite includes:
