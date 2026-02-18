@@ -200,13 +200,13 @@ function addCourtField() {
     
     // If no facilities loaded, provide text input fallback
     const facilitySelectHtml = facilityNames.length > 0 
-        ? `<select class="court-name" data-court-id="${courtId}" onchange="updateCourtNumbers(${courtId})">${facilityOptionsHtml}</select>`
-        : `<input type="text" placeholder="Tennis facility name (e.g., La Faluère)" class="court-name" data-court-id="${courtId}" onchange="updateCourtNumbers(${courtId})">`;
+        ? `<select class="court-name" data-court-id="${courtId}">${facilityOptionsHtml}</select>`
+        : `<input type="text" placeholder="Tennis facility name (e.g., La Faluère)" class="court-name" data-court-id="${courtId}">`;
     
     courtDiv.innerHTML = `
         <div class="court-header">
             ${facilitySelectHtml}
-            <button type="button" class="btn-remove" onclick="removeCourtField(${courtId})">Remove</button>
+            <button type="button" class="btn-remove" data-court-id="${courtId}">Remove</button>
         </div>
         <div class="court-numbers">
             <label>Court numbers:</label>
@@ -217,6 +217,17 @@ function addCourtField() {
     `;
     
     container.appendChild(courtDiv);
+    
+    // Attach event listeners programmatically
+    const facilityInput = courtDiv.querySelector('.court-name');
+    if (facilityInput) {
+        facilityInput.addEventListener('change', () => updateCourtNumbers(courtId));
+    }
+    
+    const removeBtn = courtDiv.querySelector('.btn-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeCourtField(courtId));
+    }
 }
 
 // Update court numbers display when facility is selected
@@ -241,9 +252,12 @@ function updateCourtNumbers(courtId) {
     }
     
     // Create checkboxes for each court number
-    let html = '<div class="court-checkboxes">';
-    html += '<label class="select-all-label"><input type="checkbox" class="select-all-courts" data-court-id="' + courtId + '" onchange="toggleAllCourts(' + courtId + ')"> Select All</label>';
-    html += '<div class="court-checkboxes-grid">';
+    let html = `<div class="court-checkboxes">
+        <label class="select-all-label">
+            <input type="checkbox" class="select-all-courts" data-court-id="${courtId}">
+            Select All
+        </label>
+        <div class="court-checkboxes-grid">`;
     
     courtNumbers.forEach(num => {
         html += `
@@ -256,6 +270,12 @@ function updateCourtNumbers(courtId) {
     
     html += '</div></div>';
     courtNumbersContainer.innerHTML = html;
+    
+    // Attach Select All event listener
+    const selectAllCheckbox = courtNumbersContainer.querySelector('.select-all-courts');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', () => toggleAllCourts(courtId));
+    }
 }
 
 // Toggle all courts selection
@@ -395,15 +415,15 @@ function loadSearchIntoForm(searchId) {
             // Trigger update to show court checkboxes
             updateCourtNumbers(lastCourtId);
             
-            // After a short delay, check the appropriate boxes
-            setTimeout(() => {
+            // Wait for checkboxes to be rendered before checking them
+            requestAnimationFrame(() => {
                 court.numbers.forEach(num => {
                     const checkbox = document.querySelector(`.court-checkbox[data-court-id="${lastCourtId}"][value="${num}"]`);
                     if (checkbox) {
                         checkbox.checked = true;
                     }
                 });
-            }, 100);
+            });
         }
     });
     
