@@ -14,6 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 @Path("/api")
 @ApplicationScoped
@@ -25,7 +26,7 @@ public class ProxyResource {
     String targetUrl;
 
     @ConfigProperty(name = "proxy.token")
-    String proxyToken;
+    Optional<String> proxyToken;
 
     private final HttpClient httpClient;
 
@@ -97,9 +98,9 @@ public class ProxyResource {
 
     private Response proxyRequest(String method, String path, String body, UriInfo uriInfo, HttpHeaders headers) {
         // Validate proxy token if configured
-        if (proxyToken != null && !proxyToken.isEmpty()) {
+        if (proxyToken.isPresent() && !proxyToken.get().isEmpty()) {
             String requestToken = headers.getHeaderString("X-Proxy-Token");
-            if (requestToken == null || !proxyToken.equals(requestToken)) {
+            if (requestToken == null || !proxyToken.get().equals(requestToken)) {
                 LOG.warnf("Unauthorized request - missing or invalid X-Proxy-Token");
                 return Response.status(Response.Status.FORBIDDEN)
                         .entity("Forbidden: Invalid or missing X-Proxy-Token")
