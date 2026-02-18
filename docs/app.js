@@ -1,5 +1,11 @@
 // Tennis Paris Listener - Search Configuration App
 
+// Constants for tennis.paris.fr API
+// Court surface types (selCoating): 96=Clay, 2095=Hard, 94=Synthetic, 1324=Carpet, 2016=Grass, 92=Other
+// Indoor/Outdoor (selInOut): V=Outdoor (Vert/Green), F=Indoor (Fermé/Closed)
+const API_COATING_TYPES = ['96', '2095', '94', '1324', '2016', '92'];
+const API_IN_OUT_TYPES = ['V', 'F'];
+
 // State
 let searches = [];
 let courtIdCounter = 0;
@@ -363,14 +369,10 @@ async function executeQuery(searchId) {
         const formData = new URLSearchParams();
         formData.append('hourRange', `${search.hourRangeStart}-${search.hourRangeEnd}`);
         formData.append('when', `${search.whenDay}/${search.whenMonth}/${search.whenYear}`);
-        formData.append('selCoating[]', '96');
-        formData.append('selCoating[]', '2095');
-        formData.append('selCoating[]', '94');
-        formData.append('selCoating[]', '1324');
-        formData.append('selCoating[]', '2016');
-        formData.append('selCoating[]', '92');
-        formData.append('selInOut[]', 'V');
-        formData.append('selInOut[]', 'F');
+        
+        // Add coating and in/out types
+        API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
+        API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
         
         const response = await fetch('https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map', {
             method: 'POST',
@@ -408,15 +410,30 @@ async function executeQuery(searchId) {
     }
 }
 
+// Helper to extract facility name from API response
+function getFacilityName(feature) {
+    return feature.properties.general._nomSrtm;
+}
+
+// Helper to extract facility ID from API response
+function getFacilityId(feature) {
+    return feature.properties.general._id;
+}
+
+// Helper to check if facility is available from API response
+function isFacilityAvailable(feature) {
+    return feature.properties.available;
+}
+
 // Filter by facilities
 function filterByFacilities(rawJson, courts) {
     const facilityNames = courts.map(c => c.name);
     
     return rawJson.features
-        .filter(feature => feature.properties.available && facilityNames.includes(feature.properties.general._nomSrtm))
+        .filter(feature => isFacilityAvailable(feature) && facilityNames.includes(getFacilityName(feature)))
         .map(feature => ({
-            facility: feature.properties.general._nomSrtm,
-            facilityId: feature.properties.general._id,
+            facility: getFacilityName(feature),
+            facilityId: getFacilityId(feature),
             courts: feature.properties.courts.map(court => ({
                 courtNumber: court._formattedAirNum,
                 courtName: court._airNom,
