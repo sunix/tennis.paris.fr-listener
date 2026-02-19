@@ -825,7 +825,7 @@ async function executeQuery(searchId) {
                 
                 // Only include if there are available slots
                 const hasAvailability = filteredPlanning.timeslots.some(slot =>
-                    Object.values(slot.courts).some(court => court.available)
+                    Object.values(slot.courts).some(courtInfo => courtInfo.available)
                 );
                 
                 if (hasAvailability) {
