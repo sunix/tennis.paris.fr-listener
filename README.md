@@ -26,7 +26,7 @@ Example output:
       "time": "09h - 10h",
       "courts": {
         "Court 05": { "status": "LIBRE", "available": true },
-        "Court 06": { "status": "Réservé le 15.02.2026", "available": false },
+        "Court 06": { "status": "Réservé le 15.02.2026 11:50", "available": false },
         "Court 07": { "status": "LIBRE", "available": true }
       }
     }
