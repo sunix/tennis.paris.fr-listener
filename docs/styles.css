@@ -459,3 +459,39 @@ footer a:hover {
     padding: 15px;
     border-radius: 4px;
 }
+
+/* Timeslots display */
+.timeslots {
+    margin-top: 10px;
+}
+
+.timeslot {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.timeslot strong {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--secondary-color);
+}
+
+.timeslot ul {
+    list-style: none;
+    padding-left: 15px;
+    margin: 0;
+}
+
+.timeslot li {
+    padding: 3px 0;
+    color: #2c3e50;
+}
+
+.facility-result p {
+    margin: 5px 0;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}

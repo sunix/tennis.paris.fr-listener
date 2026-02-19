@@ -41,3 +41,6 @@ hs_err_pid*
 .settings/
 bin/
 node_modules/
+
+# Generated files for GitHub Pages
+docs/lib/tennis-api.js
