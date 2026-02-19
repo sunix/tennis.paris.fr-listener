@@ -1,11 +1,5 @@
 // Tennis Paris Listener - Search Configuration App
 
-// Constants for tennis.paris.fr API
-// Court surface types (selCoating): 96=Clay, 2095=Hard, 94=Synthetic, 1324=Carpet, 2016=Grass, 92=Other
-// Indoor/Outdoor (selInOut): V=Outdoor (Vert/Green), F=Indoor (Fermé/Closed)
-const API_COATING_TYPES = ['96', '2095', '94', '1324', '2016', '92'];
-const API_IN_OUT_TYPES = ['V', 'F'];
-
 // CORS proxy URL - can be set to null to disable proxy
 // Using our custom Quarkus proxy deployed on Render
 // This proxy supports POST requests and forwards /api/* to https://tennis.paris.fr/*
