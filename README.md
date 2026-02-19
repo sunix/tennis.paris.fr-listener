@@ -2,31 +2,53 @@
 
 Help me to get notified once a tennis court is available
 
-## Important Limitation ⚠️
+## Availability Modes
 
-**Please read this carefully before using the listener:**
+This listener supports two modes:
 
-The tennis.paris.fr API only provides **facility-level availability**, not court-level availability. This means:
+### 🚀 **Detailed Mode** (New!)
 
-- When the listener reports courts, it means the **facility has SOME availability** during your requested time range
-- It does **NOT** mean all listed courts are available at your specific requested time
-- You **MUST verify** specific court and time availability on the [tennis.paris.fr website](https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche)
+When `DETAILED_AVAILABILITY=true`, the listener fetches **per-court, per-timeslot availability**:
 
-The listener is useful for:
-- ✅ Getting notified when a facility has availability (so you can quickly check the website)
-- ✅ Filtering by facility, court numbers, and covered/outdoor preferences
-- ✅ Reducing the number of facilities you need to manually check
+- ✅ Shows exact availability for each court at each time slot
+- ✅ Identifies specific reserved vs. available slots
+- ✅ Provides complete planning data for informed booking decisions
+- ✅ Respects all filters (court numbers, covered courts, time ranges)
 
-The listener is NOT:
-- ❌ A guarantee that specific courts are available
-- ❌ A replacement for checking the actual booking website
-- ❌ Able to show per-court, per-timeslot availability
+Example output:
+```json
+{
+  "facility": "La Faluère",
+  "date": "19/02/2026",
+  "courts": ["Court 05", "Court 06", "Court 07"],
+  "timeslots": [
+    {
+      "time": "09h - 10h",
+      "courts": {
+        "Court 05": { "status": "LIBRE", "available": true },
+        "Court 06": { "status": "Réservé le 15.02.2026", "available": false },
+        "Court 07": { "status": "LIBRE", "available": true }
+      }
+    }
+  ]
+}
+```
 
-**Recommendation:** Use this listener as an alert system. When you receive a notification, immediately check the tennis.paris.fr website to see actual court-level availability and book your desired timeslot.
+### ⚡ **Fast Mode** (Default)
+
+When `DETAILED_AVAILABILITY=false` (or not set), the listener uses **facility-level availability** for faster results:
+
+- ⚡ Faster response times (single API call per check)
+- ℹ️ Shows which facilities have availability
+- ⚠️ Does NOT provide per-court or per-timeslot details
+- ⚠️ You must verify specific availability on the website
+
+**Recommendation for Fast Mode:** Use as an alert system. When notified, check the tennis.paris.fr website for specific court/time availability.
 
 ## Features
 
 - 🎾 Checks tennis court availability on tennis.paris.fr
+- 📊 **Detailed per-court planning** (when enabled)
 - ⏰ Runs automatically every 5 minutes via GitHub Actions
 - 🔔 Sends notifications to Google Chat when availability changes
 - ⚙️ Configurable via environment variables
@@ -88,6 +110,9 @@ The web app saves your configurations in your browser's local storage, so you ca
    
    # Optional: Filter for covered courts only
    COVERED_ONLY=true
+   
+   # Optional: Enable detailed per-court availability
+   DETAILED_AVAILABILITY=true
    ```
 
 3. Install Node.js dependencies:
@@ -116,6 +141,7 @@ The web app saves your configurations in your browser's local storage, so you ca
 | `WHEN_YEAR` | Year to check | `2021` | `2021` |
 | `COURT_NUMBERS` | JSON object specifying court numbers per facility | - | `'{"La Faluère": [5,6,7,8], "Alain Mimoun": [1,2,3]}'` |
 | `COVERED_ONLY` | Filter for covered courts only | `false` | `true` |
+| `DETAILED_AVAILABILITY` | Enable per-court timeslot details | `false` | `true` |
 | `TWO_HOURS` | Look for 2 consecutive hours (future feature) | `false` | `true` |
 | `GOOGLE_CHAT_WEBHOOK` | Google Chat webhook URL (for GitHub Actions) | - | `https://chat.googleapis.com/v1/spaces/...` |
 

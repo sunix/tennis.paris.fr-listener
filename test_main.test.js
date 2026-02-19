@@ -4,7 +4,7 @@
  * Unit tests for main.js (Node.js version)
  */
 
-const { filterByFacilities, filterByCourtNumbers, filterByCovered } = require('./lib/tennis-api');
+const { filterByFacilities, filterByCourtNumbers, filterByCovered, parsePlanningHTML } = require('./lib/tennis-api');
 
 // Test utilities
 let testsPassed = 0;
@@ -139,6 +139,60 @@ console.log('');
 console.log('Test 5: Filter removes empty facilities');
 const filtered5 = filterByCourtNumbers(facilities, { 'La Faluère': [999] }, { logger: silentLogger });
 assertEquals(0, filtered5.length, 'Should remove facility with no matching courts');
+
+console.log('');
+
+// Test 6: Parse planning HTML with available slots
+console.log('Test 6: Parse planning HTML with available slots');
+const mockPlanningHTML = `
+<table class="reservation">
+    <thead>
+        <tr>
+            <th></th>
+            <th class="sorttable_nosort">
+                <span class="title">Court 01</span>
+            </th>
+            <th class="sorttable_nosort">
+                <span class="title">Court 02</span>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>09h - 10h</td>
+            <td>
+                <span>LIBRE</span>
+            </td>
+            <td>
+                <span>LIBRE</span>
+            </td>
+        </tr>
+        <tr>
+            <td>10h - 11h</td>
+            <td class="reservation-cell">
+                <p class="title-cell">PUBLIC</p>
+                <br/>
+                <span>Réservé le 13.02.2026 09:01</span>
+            </td>
+            <td>
+                <span>LIBRE</span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+`;
+
+const parsed = parsePlanningHTML(mockPlanningHTML);
+assertEquals(2, parsed.courts.length, 'Should parse 2 courts');
+assertEquals('Court 01', parsed.courts[0], 'First court should be Court 01');
+assertEquals('Court 02', parsed.courts[1], 'Second court should be Court 02');
+assertEquals(2, parsed.timeslots.length, 'Should parse 2 timeslots');
+assertEquals('09h - 10h', parsed.timeslots[0].time, 'First timeslot should be 09h - 10h');
+assertEquals(true, parsed.timeslots[0].courts['Court 01'].available, 'Court 01 at 09h should be available');
+assertEquals('LIBRE', parsed.timeslots[0].courts['Court 01'].status, 'Court 01 at 09h should have LIBRE status');
+assertEquals(false, parsed.timeslots[1].courts['Court 01'].available, 'Court 01 at 10h should not be available');
+assertContains(parsed.timeslots[1].courts['Court 01'].status, 'Réservé', 'Court 01 at 10h should show Réservé');
+assertEquals(true, parsed.timeslots[1].courts['Court 02'].available, 'Court 02 at 10h should be available');
 
 console.log('');
 
