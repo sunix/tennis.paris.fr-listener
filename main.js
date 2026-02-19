@@ -6,7 +6,7 @@
  */
 
 const fs = require('fs');
-const { getAvailability } = require('./lib/tennis-api');
+const { getAvailability, getDetailedAvailability } = require('./lib/tennis-api');
 
 // Load environment variables from .env file if it exists
 function loadEnv() {
@@ -40,7 +40,8 @@ function getConfig() {
         whenYear: parseInt(process.env.WHEN_YEAR || '2021', 10),
         facilities: (process.env.COURTS || 'Philippe Auguste,Candie,Thiéré,La Faluère').split(',').map(s => s.trim()),
         courtNumbers: null,
-        coveredOnly: process.env.COVERED_ONLY === 'true'
+        coveredOnly: process.env.COVERED_ONLY === 'true',
+        detailedMode: process.env.DETAILED_AVAILABILITY === 'true'
     };
     
     // Parse court numbers if provided
@@ -78,6 +79,9 @@ async function main() {
         if (config.coveredOnly) {
             console.error('Covered Courts Only: Yes');
         }
+        if (config.detailedMode) {
+            console.error('Detailed Availability Mode: Enabled');
+        }
         
         // Check if date is in the past
         if (isDateInPast(config.whenDay, config.whenMonth, config.whenYear)) {
@@ -87,9 +91,16 @@ async function main() {
         }
         
         // Fetch and filter availability
-        const results = await getAvailability(config, {
-            logger: (...args) => console.error(...args)
-        });
+        let results;
+        if (config.detailedMode) {
+            results = await getDetailedAvailability(config, {
+                logger: (...args) => console.error(...args)
+            });
+        } else {
+            results = await getAvailability(config, {
+                logger: (...args) => console.error(...args)
+            });
+        }
         
         // Read previous state
         const stateFile = '/tmp/tennis.json';
