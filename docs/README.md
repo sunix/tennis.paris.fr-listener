@@ -50,6 +50,18 @@ At Alain Mimoun, you only want covered courts (1, 2, 3):
 - Uses browser's localStorage API for data persistence
 - Fully static - can be hosted on GitHub Pages or any static hosting
 - Exports to `.env` format compatible with the tennis.paris.fr-listener
+- Uses `lib/tennis-api.js` from the main library (automatically copied during GitHub Pages deployment)
+
+## Development
+
+When developing locally, you'll need to manually copy `lib/tennis-api.js` to `docs/lib/` for the app to work:
+
+```bash
+mkdir -p docs/lib
+cp lib/tennis-api.js docs/lib/tennis-api.js
+```
+
+Note: `docs/lib/tennis-api.js` is gitignored and automatically generated during GitHub Pages deployment, so you don't need to commit it.
 
 ## Files
 

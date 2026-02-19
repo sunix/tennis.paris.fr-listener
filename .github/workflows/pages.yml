@@ -27,6 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Prepare docs directory
+        run: |
+          mkdir -p docs/lib
+          cp lib/tennis-api.js docs/lib/tennis-api.js
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
