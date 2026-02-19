@@ -762,71 +762,90 @@ async function executeQuery(searchId) {
     resultsContainer.innerHTML = '<div class="loading">⏳ Executing query...</div>';
     
     try {
-        // Build API URL
-        const apiUrl = 'https://tennis.paris.fr/tennis/jsp/site/Portal.jsp?page=recherche&action=ajax_disponibilite_map';
+        // Use the TennisAPI.fetchCourtPlanning function from lib/tennis-api.js
+        const results = [];
         
-        // Fetch data from API with CORS proxy if available
-        const formData = new URLSearchParams();
-        formData.append('hourRange', `${search.hourRangeStart}-${search.hourRangeEnd}`);
-        formData.append('when', `${search.whenDay}/${search.whenMonth}/${search.whenYear}`);
-        
-        // Add coating and in/out types
-        API_COATING_TYPES.forEach(type => formData.append('selCoating[]', type));
-        API_IN_OUT_TYPES.forEach(type => formData.append('selInOut[]', type));
-        
-        // Try with CORS proxy first, fallback to direct if proxy fails
-        let response;
-        let rawJson;
-        
-        if (CORS_PROXY) {
+        for (const court of search.courts) {
             try {
-                // Use CORS proxy - construct proxy URL by extracting path from tennis.paris.fr
-                const tennisUrl = new URL(apiUrl);
-                const proxiedUrl = `${CORS_PROXY}${tennisUrl.pathname}${tennisUrl.search}`;
-                response = await fetch(proxiedUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: formData.toString()
+                // Fetch detailed planning for each facility using the library function
+                const planning = await window.TennisAPI.fetchCourtPlanning({
+                    facilityName: court.name,
+                    whenDay: search.whenDay,
+                    whenMonth: search.whenMonth,
+                    whenYear: search.whenYear
+                }, {
+                    logger: console.log,
+                    corsProxy: CORS_PROXY
                 });
                 
-                if (response.ok) {
-                    rawJson = await response.json();
+                // Filter timeslots to only include the requested hour range
+                const filteredTimeslots = planning.timeslots.filter(slot => {
+                    // Parse time from "08h - 09h" format
+                    const startHour = parseInt(slot.time.split('h')[0]);
+                    return startHour >= search.hourRangeStart && startHour < search.hourRangeEnd;
+                });
+                
+                // Filter courts by court numbers if specified
+                let courtsToInclude = planning.courts;
+                if (court.numbers && court.numbers.length > 0) {
+                    courtsToInclude = planning.courts.filter(courtName => {
+                        const match = courtName.match(/Court (\d+)/);
+                        if (match) {
+                            const courtNum = parseInt(match[1]);
+                            return court.numbers.includes(courtNum);
+                        }
+                        return false;
+                    });
                 }
-            } catch (proxyError) {
-                console.warn('CORS proxy failed, trying direct request:', proxyError);
-                // Fall through to direct request
+                
+                // Filter by covered courts if needed
+                // Note: The planning doesn't include covered info, so we rely on the numbers filter
+                // or we need to use the FALLBACK_FACILITIES data
+                if (search.coveredOnly && FALLBACK_FACILITIES[court.name]) {
+                    const coveredNumbers = FALLBACK_FACILITIES[court.name]
+                        .filter(c => c.covered)
+                        .map(c => c.number);
+                    courtsToInclude = courtsToInclude.filter(courtName => {
+                        const match = courtName.match(/Court (\d+)/);
+                        if (match) {
+                            const courtNum = parseInt(match[1]);
+                            return coveredNumbers.includes(courtNum);
+                        }
+                        return false;
+                    });
+                }
+                
+                // Filter planning data to only include relevant courts and timeslots
+                const filteredPlanning = {
+                    facility: court.name,
+                    date: planning.date,
+                    courts: courtsToInclude,
+                    timeslots: filteredTimeslots.map(slot => ({
+                        time: slot.time,
+                        courts: Object.fromEntries(
+                            Object.entries(slot.courts)
+                                .filter(([courtName]) => courtsToInclude.includes(courtName))
+                        )
+                    })).filter(slot => Object.keys(slot.courts).length > 0)
+                };
+                
+                // Only include if there are available slots
+                const hasAvailability = filteredPlanning.timeslots.some(slot =>
+                    Object.values(slot.courts).some(court => court.available)
+                );
+                
+                if (hasAvailability) {
+                    results.push(filteredPlanning);
+                }
+                
+            } catch (error) {
+                console.warn(`Could not fetch planning for ${court.name}:`, error);
+                // Continue with other facilities
             }
-        }
-        
-        // If proxy didn't work or wasn't used, try direct request
-        if (!rawJson) {
-            response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: formData.toString()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            rawJson = await response.json();
-        }
-        
-        // Apply filters
-        let filteredResults = filterByFacilities(rawJson, search.courts);
-        filteredResults = filterByCourtNumbers(filteredResults, search.courts);
-        
-        if (search.coveredOnly) {
-            filteredResults = filterByCovered(filteredResults);
         }
         
         // Display results
-        displayQueryResults(resultsContainer, filteredResults, search);
+        displayQueryResults(resultsContainer, results, search);
         
     } catch (error) {
         let errorMessage = escapeHtml(error.message);
@@ -906,27 +925,54 @@ function displayQueryResults(container, results, search) {
         return;
     }
     
-    const totalCourts = results.reduce((sum, facility) => sum + facility.courts.length, 0);
-    
     let html = `
         <div class="query-results-content">
-            <h4>✅ Found ${totalCourts} available court${totalCourts !== 1 ? 's' : ''}</h4>
+            <h4>✅ Found ${results.length} facilit${results.length !== 1 ? 'ies' : 'y'} with available courts</h4>
     `;
     
     results.forEach(facility => {
+        // Count total available slots
+        const availableSlots = facility.timeslots.reduce((count, slot) => {
+            return count + Object.values(slot.courts).filter(c => c.available).length;
+        }, 0);
+        
         html += `
             <div class="facility-result">
                 <h5>🎾 ${escapeHtml(facility.facility)}</h5>
-                <ul>
+                <p><strong>Date:</strong> ${escapeHtml(facility.date)} | <strong>Available slots:</strong> ${availableSlots}</p>
         `;
         
-        facility.courts.forEach(court => {
-            const coveredIcon = court.covered === 'V' ? '☂️' : '☀️';
-            html += `<li>${coveredIcon} Court ${court.courtNumber}: ${escapeHtml(court.courtName)}</li>`;
-        });
+        // Display timeslots with availability
+        if (facility.timeslots.length > 0) {
+            html += '<div class="timeslots">';
+            
+            facility.timeslots.forEach(slot => {
+                const availableCourts = Object.entries(slot.courts)
+                    .filter(([_, courtInfo]) => courtInfo.available)
+                    .map(([courtName, _]) => courtName);
+                
+                if (availableCourts.length > 0) {
+                    html += `
+                        <div class="timeslot">
+                            <strong>⏰ ${escapeHtml(slot.time)}</strong>
+                            <ul>
+                    `;
+                    
+                    availableCourts.forEach(courtName => {
+                        html += `<li>✓ ${escapeHtml(courtName)}</li>`;
+                    });
+                    
+                    html += `
+                            </ul>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += '</div>';
+        }
         
         html += `
-                </ul>
             </div>
         `;
     });
