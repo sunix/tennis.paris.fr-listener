@@ -53,7 +53,7 @@ public class ProxyResource {
         return Response.noContent()
                 .header("Access-Control-Allow-Origin", allowedOrigin)
                 .header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
-                .header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Proxy-Token")
+                .header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Proxy-Token,X-Requested-With")
                 .header("Access-Control-Max-Age", "86400")
                 .build();
     }
@@ -142,6 +142,11 @@ public class ProxyResource {
             String authorization = headers.getHeaderString("Authorization");
             if (authorization != null) {
                 requestBuilder.header("Authorization", authorization);
+            }
+
+            String xRequestedWith = headers.getHeaderString("X-Requested-With");
+            if (xRequestedWith != null) {
+                requestBuilder.header("X-Requested-With", xRequestedWith);
             }
 
             // Set method and body
