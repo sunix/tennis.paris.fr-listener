@@ -73,8 +73,11 @@ read -r -d '' MESSAGE << EOF || true
 • Date: ${WHEN_DAY}/${WHEN_MONTH}/${WHEN_YEAR}
 • Time range: ${HOUR_RANGE_START}:00 - ${HOUR_RANGE_END}:00
 ${FILTERS}
-🎾 Available Courts:
+🎾 Facilities with Availability:
 ${AVAILABLE_COURTS}
+
+⚠️ IMPORTANT: These are facilities with SOME availability during the time range.
+Specific court/time availability must be verified on https://tennis.paris.fr
 EOF
 
 # Build JSON payload properly using Python
