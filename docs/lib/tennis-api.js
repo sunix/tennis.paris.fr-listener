@@ -4,10 +4,9 @@
  */
 
 // Import fetch for Node.js environment
-let fetch;
-if (typeof window === 'undefined') {
-    // Node.js environment
-    fetch = require('node-fetch');
+if (typeof window === 'undefined' && typeof fetch === 'undefined') {
+    // Node.js environment - need to use node-fetch
+    globalThis.fetch = require('node-fetch');
 }
 
 // Constants for tennis.paris.fr API
